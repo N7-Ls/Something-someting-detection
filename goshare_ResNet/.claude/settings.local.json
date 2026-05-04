@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude:*)",
+      "Bash(where:*)",
+      "Bash(node:*)",
+      "Bash(nvm version:*)",
+      "Bash(cmd /c:*)",
+      "WebSearch",
+      "Bash(pip install:*)",
+      "Bash(pip index:*)",
+      "Bash(python -m py_compile register_user.py)",
+      "Bash(python -m py_compile verify_user.py)",
+      "Bash(python -c \"import numpy; import cv2; print\\(''numpy:'', numpy.__version__\\); print\\(''cv2:'', cv2.__version__\\)\")",
+      "Bash(pip list:*)",
+      "Bash(conda run:*)",
+      "Bash(source ~/anaconda3/etc/profile.d/conda.sh)",
+      "Bash(source ~/miniconda3/etc/profile.d/conda.sh)",
+      "Bash(source /opt/conda/etc/profile.d/conda.sh)",
+      "Bash(python -c \"import uniface; print\\(''uniface OK''\\)\")",
+      "Bash(python -c \"import cv2; print\\(''cv2 version:'', cv2.__version__\\)\")",
+      "Bash(python -c \"import numpy; print\\(''numpy version:'', numpy.__version__\\)\")",
+      "Bash(python -c \"import cv2; print\\(''''cv2:'''', cv2.__version__\\)\")",
+      "Bash(python -c \"import numpy; print\\(''''numpy:'''', numpy.__version__\\)\")",
+      "Bash(pip show:*)"
+    ]
+  }
+}

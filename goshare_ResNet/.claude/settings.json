@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(conda activate:*)",
+      "Bash(source /c/ProgramData/miniconda3/etc/profile.d/conda.sh)",
+      "Bash(source /c/Users/bryan/anaconda3/etc/profile.d/conda.sh)",
+      "Read(//c/ProgramData//**)",
+      "Read(//c/Users/bryan//**)"
+    ]
+  }
+}

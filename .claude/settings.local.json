@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Users/bryan/anaconda3/envs/goshare/python.exe\" -)",
+      "Bash(cmd /c \"where python 2>nul\")",
+      "Bash(cmd /c \"conda env list 2>nul\")",
+      "Bash(cmd /c \"C:\\\\\\\\Windows\\\\\\\\System32\\\\\\\\where.exe python 2>nul\")"
+    ]
+  }
+}
