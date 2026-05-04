@@ -14,7 +14,7 @@ LEVEL_COLOR = {
 }
 
 
-def annotate(frame, state: dict, fps: float):
+def annotate(frame, state: dict, fps: float, display_frame_id: int = 0):
     h, w = frame.shape[:2]
     out   = frame.copy()
     level = state["alert_level"]
@@ -100,6 +100,15 @@ def annotate(frame, state: dict, fps: float):
         (wmd_txt,                                                               wmd_color(wmd, thr)),
         (f"FPS  : {fps:.1f}",                                                  (200, 200, 200)),
     ]
+
+    # YOLO 影格落差：若 YOLO 比當前顯示幀落後超過 8 幀，以黃色警示
+    yolo_fid = state.get("yolo_frame_id", 0)
+    face_fid = state.get("face_frame_id", 0)
+    yolo_lag = display_frame_id - yolo_fid
+    face_lag = display_frame_id - face_fid
+    lag_txt   = f"Sync : Y-{yolo_lag} F-{face_lag}"
+    lag_color = (0, 200, 255) if (yolo_lag > 8 or face_lag > 8) else (100, 100, 100)
+    panel.append((lag_txt, lag_color))
 
     LINE_H  = 28
     PANEL_W = 235

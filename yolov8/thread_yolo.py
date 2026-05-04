@@ -188,9 +188,10 @@ def thread_yolo():
                     result["cigarette_detected"] = True
 
             with display_lock:
-                display_state["phone_boxes"] = phone_boxes
-                display_state["cig_boxes"]   = cig_boxes
-                display_state["wrist_xy"]    = wrists
+                display_state["phone_boxes"]   = phone_boxes
+                display_state["cig_boxes"]     = cig_boxes
+                display_state["wrist_xy"]      = wrists
+                display_state["yolo_frame_id"] = frame_id
 
         except Exception as e:
             logging.error(f"YOLOv8 推論例外：{e}")

@@ -26,11 +26,11 @@ def thread_capture():
                 time.sleep(0.01)
                 continue
 
-            ts     = time.time()
+            ts     = time.perf_counter()
             packet = (frame_id, ts, frame)
             put_nowait_safe(queue_pose,    packet)
             put_nowait_safe(queue_face,    packet)
-            put_nowait_safe(queue_display, frame)
+            put_nowait_safe(queue_display, (frame_id, frame))
             frame_id += 1
     except Exception as e:
         logging.error(f"擷取執行緒例外：{e}")

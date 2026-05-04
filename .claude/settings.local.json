@@ -4,7 +4,11 @@
       "Bash(\"C:/Users/bryan/anaconda3/envs/goshare/python.exe\" -)",
       "Bash(cmd /c \"where python 2>nul\")",
       "Bash(cmd /c \"conda env list 2>nul\")",
-      "Bash(cmd /c \"C:\\\\\\\\Windows\\\\\\\\System32\\\\\\\\where.exe python 2>nul\")"
+      "Bash(cmd /c \"C:\\\\\\\\Windows\\\\\\\\System32\\\\\\\\where.exe python 2>nul\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\program1\\\\NCHU_4112060004\\\\NCHU_4112060004\\\\1142\\\\goshare\\\\goshare_yolov8\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)"
     ]
   }
 }

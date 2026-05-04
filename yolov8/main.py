@@ -42,11 +42,12 @@ def main():
     try:
         while not stop_event.is_set():
             try:
-                frame = queue_display.get(timeout=0.5)
+                packet = queue_display.get(timeout=0.5)
             except Exception:
                 continue
-            if frame is None:
+            if packet is None:
                 break
+            display_frame_id, frame = packet
 
             fps_counter += 1
             now = time.time()
@@ -59,7 +60,7 @@ def main():
                 state_snap = {k: (v.copy() if isinstance(v, list) else v)
                               for k, v in display_state.items()}
 
-            annotated = annotate(frame, state_snap, fps_display)
+            annotated = annotate(frame, state_snap, fps_display, display_frame_id)
 
             if video_writer is not None:
                 video_writer.write(annotated)

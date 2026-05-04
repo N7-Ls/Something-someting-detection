@@ -130,7 +130,8 @@ def thread_decision():
             yolo = cache_yolo.get(fid)
             if yolo is None and cache_yolo:
                 latest = cache_yolo[max(cache_yolo.keys())]
-                if time.time() - latest["timestamp"] < 0.5:
+                # perf_counter 與 thread_capture 的 ts 同源，不受 NTP 影響
+                if time.perf_counter() - latest["timestamp"] < 0.5:
                     yolo = latest
             face = (cache_face.get(fid) or
                     (cache_face[max(cache_face.keys())] if cache_face else None))
@@ -243,6 +244,12 @@ def thread_decision():
             with display_lock:
                 display_state["alert_level"] = level
                 display_state["alert_msg"]   = msg
+                display_state["alert_flags"] = {
+                    "phone":    trig_phone,
+                    "smoke":    trig_smoke,
+                    "fatigue":  trig_fatigue,
+                    "distract": trig_distract,
+                }
 
             if RECORD_CSV:
                 csv_writer.writerow([

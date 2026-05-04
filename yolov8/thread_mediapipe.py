@@ -95,6 +95,7 @@ def thread_mediapipe():
                     display_state["face_pts"]       = face_pts
                     display_state["mesh_landmarks"] = all_pts
                     display_state["face_width"]     = face_w
+                    display_state["face_frame_id"]  = frame_id
             else:
                 with display_lock:
                     display_state["face_detected"]  = False

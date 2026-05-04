@@ -55,5 +55,10 @@ display_state = {
     "alert_level":  0,
     "alert_msg":    "",
     "calib_status": f"校準中… {CALIB_SECONDS:.0f}s",
+    # 影格同步追蹤（建議 1）
+    "yolo_frame_id": 0,
+    "face_frame_id": 0,
+    # 各違規項目觸發旗標（由 thread_decision 寫出，供 PyQt5 儀表板讀取）
+    "alert_flags": {"phone": False, "smoke": False, "fatigue": False, "distract": False},
 }
 display_lock = threading.Lock()
