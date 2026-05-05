@@ -1,4 +1,4 @@
-goshare_yolov8/output/
+yolov8/output/
 
 # Windows reserved device name (cannot be handled by git on Windows)
 nul

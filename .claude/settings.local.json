@@ -14,7 +14,13 @@
       "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\言\\\\.claude\\\\projects\\\\c--program1-NCHU-4112060004-NCHU-4112060004-1142-goshare\\\\memory\")",
       "Bash(Out-Null)",
       "Bash(Write-Output \"done\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\program1\\\\NCHU_4112060004\\\\NCHU_4112060004\\\\1142\\\\goshare\\\\Old_md\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\program1\\\\NCHU_4112060004\\\\NCHU_4112060004\\\\1142\\\\goshare\\\\Old_md\")",
+      "Bash(conda info *)",
+      "Bash(conda list *)",
+      "PowerShell(conda info)",
+      "PowerShell(conda list)",
+      "PowerShell(python --version)",
+      "PowerShell(python -c \"import sys; print\\(sys.executable\\)\")"
     ]
   }
 }
