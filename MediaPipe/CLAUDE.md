@@ -1,24 +1,18 @@
-# 實作需求：安全帽防偽偵測系統
+# 安全帽偵測模組
 
-參考"提案書_v8.docx"中、4.3節內容
-請撰寫 Python 測試程式，結合幾何定位與材質分析。
+臉部幾何定位（MediaPipe 468 點）+ 材質分類（MobileNetV2）判斷頭頂是否戴安全帽。
 
-## 1. 幾何定位 (MediaPipe)
-- 擷取臉部 468 個特徵點。
-- 鎖定雙眼與前額，動態計算並擷取頭頂的 ROI。
-- ROI 需隨頭部轉動即時位移。
+## 流程
 
-## 2. 材質分析 (MobileNetV2)
-- 將 ROI 影像輸入 MobileNetV2 卷積、訓練進行二元分類。
-- 類別為「安全帽硬殼」與「頭髮/皮膚」。
-- 使用 Softmax 計算機率分佈。
+1. MediaPipe 鎖定雙眼與前額，動態計算頭頂 ROI（隨頭部轉動位移）
+2. ROI 輸入 MobileNetV2 二元分類：「安全帽硬殼」vs「頭髮/皮膚」
+3. 偵測到人臉且 ROI=安全帽 → 解鎖；否則維持閉鎖
 
-## 3. 控制邏輯
-- 預設狀態為動力鎖定。
-- 偵測到人臉且 ROI 為安全帽：輸出解鎖訊號。
-- 偵測到人臉但 ROI 為皮膚/頭髮：維持閉鎖，發出提醒。
+## 控制邏輯
 
-## 4. 系統要求
-- 框架：OpenCV, MediaPipe, TensorFlow/Keras。
-- 顯示 Webcam 即時畫面，畫出特徵點與 ROI 框，並印出判定狀態。
-- 預留 `send_to_arduino()` 函式。
+- 預設狀態：動力鎖定
+- 預留 `send_to_arduino()` 函式輸出解鎖/閉鎖訊號
+
+## 框架
+
+OpenCV + MediaPipe + TensorFlow/Keras（`train.py` 訓練 MobileNetV2 二元分類器）

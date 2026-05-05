@@ -1,0 +1,23 @@
+# Core vision & detection
+opencv-python
+numpy
+mediapipe
+ultralytics
+
+# Deep learning
+tensorflow
+
+# GUI
+PyQt5
+
+# Face recognition
+uniface
+deepface
+retinaface
+
+# HTTP & misc
+requests
+matplotlib
+
+# Serial communication (optional, used in yolov8/monitor.py)
+pyserial
