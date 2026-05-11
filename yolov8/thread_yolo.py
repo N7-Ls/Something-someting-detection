@@ -2,9 +2,9 @@
 執行緒 2：YOLOv8 推論。
 偵測手機、手腕關鍵點、香菸。
 
-手機模型：yolov8n_phone.pt（IndUSV/yolov8n-mobile-phone，MIT）
-  - class 0 = mobile_phone，Precision=88.4%，mAP50=81.6%
-  - 專門訓練、多角度，優於 COCO class 67
+手機模型：yolov8s.pt（COCO class 67 = cell phone）
+  - COCO 訓練資料多樣，涵蓋各種角度、遮擋、手持場景
+  - 配合 ROI（手腕/手肘周圍）降低誤報
 
 香菸模型：yolov8n_cigarette.pt（basant18/Smoking-detection-YOLO26s，Apache 2.0）
   - class 0 = smoke，Precision=92.61%
@@ -16,15 +16,13 @@ import time
 import state
 from config import (
     YOLO_PHONE_CONF, YOLO_IMGSZ, YOLO_POSE_IMGSZ, YOLO_CIG_CONF,
-    CIG_INTERVAL_SEC, PHONE_MAX_AREA_RATIO, PHONE_SQUARE_MIN, PHONE_SQUARE_MAX,
+    CIG_INTERVAL_SEC, PHONE_ROI_PAD,
 )
 from state  import queue_pose, queue_decision, stop_event, display_state, display_lock
 from utils  import put_nowait_safe
 from ultralytics import YOLO
 
-_PHONE_LOCAL = "yolov8n_phone.pt"
-_PHONE_HF    = "IndUSV/yolov8n-mobile-phone"
-_PHONE_HF_FILE = "yolov8n-mobile-phone.pt"
+_PHONE_CLS = 67   # COCO cell phone
 
 _CIG_LOCAL = "yolov8n_cigarette.pt"
 _CIG_HF    = "basant18/Smoking-detection-YOLO26s"
@@ -32,7 +30,6 @@ _CIG_CLASS = 0
 
 
 def _hf_download(repo_id, filename, local_path):
-    """從 Hugging Face 下載模型並快取至本地。"""
     try:
         from huggingface_hub import hf_hub_download
         import shutil
@@ -40,20 +37,6 @@ def _hf_download(repo_id, filename, local_path):
         shutil.copy2(pt, local_path)
     except ImportError:
         raise RuntimeError("需要 huggingface_hub：pip install huggingface_hub")
-
-
-def _load_phone_model():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    local_path = os.path.join(script_dir, _PHONE_LOCAL)
-    if os.path.exists(local_path):
-        model = YOLO(local_path)
-        logging.info(f"手機模型載入：{local_path}，classes={model.names}")
-        return model
-    logging.info(f"從 Hugging Face 下載手機模型：{_PHONE_HF}")
-    _hf_download(_PHONE_HF, _PHONE_HF_FILE, local_path)
-    model = YOLO(local_path)
-    logging.info(f"手機模型已快取至：{local_path}")
-    return model
 
 
 def _load_cig_model():
@@ -77,12 +60,16 @@ def thread_yolo():
         logging.error(f"pose 模型載入失敗：{e}")
         return
 
+    # COCO yolov8s：手持遮擋場景比 IndUSV nano 模型更可靠
+    _phone_pt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yolov8s.pt")
     try:
-        model_phone = _load_phone_model()
-        logging.info("手機模型就緒")
+        model_phone = YOLO(_phone_pt)
+        logging.info(f"手機模型就緒：yolov8s.pt  class={_PHONE_CLS} ({model_phone.names[_PHONE_CLS]})")
     except Exception as e:
-        logging.warning(f"手機專用模型載入失敗（{e}），fallback 至 COCO class 67")
-        model_phone = YOLO("yolov8n.pt")
+        logging.error(f"手機模型載入失敗：{e}")
+        return
+
+    phone_cls = _PHONE_CLS
 
     try:
         model_cig = _load_cig_model()
@@ -91,9 +78,6 @@ def thread_yolo():
     except Exception as e:
         logging.warning(f"香菸模型載入失敗（{e}），改用手腕靠嘴 fallback（持續 3 秒）")
         model_cig = None
-
-    # 判斷手機模型是否為專用模型（class 0）或 COCO fallback（class 67）
-    phone_cls = 0 if (model_phone.names.get(0) == "mobile_phone") else 67
 
     _last_cig_time = 0.0
 
@@ -114,35 +98,71 @@ def thread_yolo():
         try:
             phone_boxes, wrists, cig_boxes = [], [], []
             fh, fw_img = frame.shape[:2]
-            frame_area = fh * fw_img
 
-            res_phone = model_phone(frame, verbose=False, conf=YOLO_PHONE_CONF, imgsz=YOLO_IMGSZ)[0]
-            if res_phone.boxes is not None:
-                for box in res_phone.boxes:
-                    if int(box.cls[0]) != phone_cls:
-                        continue
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    bw, bh = x2 - x1, y2 - y1
-                    # 面積過大（軀幹）或近正方形（非手機）→ 跳過
-                    if bw * bh > frame_area * PHONE_MAX_AREA_RATIO:
-                        continue
-                    aspect = bw / bh if bh > 0 else 0
-                    if PHONE_SQUARE_MIN < aspect < PHONE_SQUARE_MAX:
-                        continue
-                    result["phone_detected"] = True
-                    phone_boxes.append((x1, y1, x2, y2, float(box.conf[0])))
-
+            # ── Step 1: Pose → 手腕 + 手肘 ──────────────────────────────────
+            elbows = []
             res_pose = model_pose(frame, verbose=False, imgsz=YOLO_POSE_IMGSZ)[0]
             if res_pose.keypoints is not None and len(res_pose.keypoints) > 0:
                 kps_xy   = res_pose.keypoints[0].xy.cpu().numpy()
                 kps_conf = res_pose.keypoints[0].conf.cpu().numpy()
-                for idx in [9, 10]:
-                    if idx < len(kps_xy) and kps_conf[idx] > 0.3:
+                for idx in [9, 10]:          # 手腕
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.15:
                         x, y = kps_xy[idx]
                         if x > 0 and y > 0:
                             wrists.append((float(x), float(y)))
-                if wrists:
-                    result["wrist_xy"] = wrists
+                for idx in [7, 8]:           # 手肘
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.20:
+                        x, y = kps_xy[idx]
+                        if x > 0 and y > 0:
+                            elbows.append((float(x), float(y)))
+            if wrists:
+                result["wrist_xy"] = wrists
+
+            # ── Step 2: Phone ROI ─────────────────────────────────────────────
+            # 手腕可見 → ROI 以手腕為中心，往上延伸（手機在手腕上方）
+            # 手腕不可見但手肘可見 → ROI 以手肘為中心，往下延伸（手機在手肘下方）
+            pad = int(min(fh, fw_img) * PHONE_ROI_PAD)
+
+            def _phone_roi_scan(ax, ay, extend_down: bool):
+                if extend_down:
+                    rx1 = max(0,      int(ax - pad * 0.9))
+                    rx2 = min(fw_img, int(ax + pad * 0.9))
+                    ry1 = max(0,      int(ay - pad * 0.3))
+                    ry2 = min(fh,     int(ay + pad * 2.0))
+                else:
+                    rx1 = max(0,      int(ax - pad))
+                    rx2 = min(fw_img, int(ax + pad))
+                    ry1 = max(0,      int(ay - pad * 1.4))
+                    ry2 = min(fh,     int(ay + pad * 0.6))
+                if (rx2 - rx1) < 32 or (ry2 - ry1) < 32:
+                    return
+                roi    = frame[ry1:ry2, rx1:rx2]
+                res_ph = model_phone(roi, verbose=False, conf=YOLO_PHONE_CONF,
+                                     imgsz=YOLO_IMGSZ)[0]
+                if res_ph.boxes is None:
+                    return
+                for box in res_ph.boxes:
+                    if int(box.cls[0]) != phone_cls:
+                        continue
+                    bx1, by1, bx2, by2 = box.xyxy[0].cpu().numpy()
+                    bx1 += rx1; by1 += ry1; bx2 += rx1; by2 += ry1
+                    conf_v = float(box.conf[0])
+                    logging.debug(
+                        f"Phone ROI hit: conf={conf_v:.2f} "
+                        f"anchor=({'elbow' if extend_down else 'wrist'})"
+                        f"({ax:.0f},{ay:.0f})"
+                    )
+                    result["phone_detected"] = True
+                    phone_boxes.append((bx1, by1, bx2, by2, conf_v))
+
+            if wrists:
+                for wx, wy in wrists:
+                    _phone_roi_scan(wx, wy, extend_down=False)
+            elif elbows:
+                # 手肘 fallback：只取畫面上方 3/4 以內的手肘（手有抬起才有意義）
+                for ex, ey in elbows:
+                    if ey < fh * 0.75:
+                        _phone_roi_scan(ex, ey, extend_down=True)
 
             # 香菸模型依時間間隔推論，避免丟幀導致間隔不穩定
             _now = time.perf_counter()

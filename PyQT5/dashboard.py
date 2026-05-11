@@ -36,7 +36,7 @@ from state import (
     display_state, display_lock,
 )
 from thread_capture   import thread_capture
-from thread_yolo      import thread_yolo
+from thread_yolo      import thread_yolo 
 from thread_mediapipe import thread_mediapipe
 from thread_decision  import thread_decision
 from display          import annotate
@@ -53,7 +53,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="[%(threadName)s] %(message)s")
 
 # ── 常數 ────────────────────────────────────────────────────────────────────
-_PANEL_W    = 290
+_PANEL_W    = 300
 _REFRESH_MS = 33      # ~30 fps UI 刷新
 
 
@@ -87,51 +87,139 @@ class VideoWidget(QLabel):
             self.setPixmap(scaled)
 
 
-# ── AlertIcon ────────────────────────────────────────────────────────────────
-class AlertIcon(QWidget):
-    """單一違規項目的 emoji + 文字 + 指示燈。"""
+# ── PhoneStatusBar ────────────────────────────────────────────────────────────
+class PhoneStatusBar(QWidget):
+    """模擬手機頂部狀態欄（時間 + 應用名稱）。"""
+
+    def __init__(self):
+        super().__init__()
+        self.setFixedHeight(30)
+        self.setStyleSheet("background: #0d0d0d;")
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(14, 0, 14, 0)
+
+        self._time_lbl = QLabel("--:--")
+        self._time_lbl.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        self._time_lbl.setStyleSheet("color: #dddddd;")
+
+        app_lbl = QLabel("GoShare")
+        app_lbl.setFont(QFont("Segoe UI", 8))
+        app_lbl.setStyleSheet("color: #555555; letter-spacing: 1px;")
+
+        lay.addWidget(self._time_lbl)
+        lay.addStretch()
+        lay.addWidget(app_lbl)
+
+    def tick(self):
+        import datetime
+        self._time_lbl.setText(datetime.datetime.now().strftime("%H:%M"))
+
+
+# ── NotificationCard ──────────────────────────────────────────────────────────
+class NotificationCard(QWidget):
+    """手機通知卡片樣式的違規指示器（無 emoji）。"""
 
     _COLORS = {
         "normal":    "#3a3a3a",
-        "condition": "#e67e22",   # 橘：感測條件瞬間成立
-        "triggered": "#e74c3c",   # 紅：計時器觸發（真正警報）
+        "condition": "#e67e22",
+        "triggered": "#e74c3c",
+    }
+    _SUBTITLES = {
+        "normal":    "待機中",
+        "condition": "條件成立",
+        "triggered": "警報觸發",
+    }
+    _BADGE_TEXT = {
+        "phone":    "TEL",
+        "smoke":    "SMK",
+        "fatigue":  "DRW",
+        "distract": "EYE",
     }
 
-    def __init__(self, emoji: str, label: str):
+    def __init__(self, key: str, label: str):
         super().__init__()
+        self._key = key
         self._cur_state = "normal"
+        self.setFixedHeight(58)
 
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(4, 2, 4, 2)
-        lay.setSpacing(6)
+        lay.setContentsMargins(0, 0, 10, 0)
+        lay.setSpacing(0)
 
-        emoji_lbl = QLabel(emoji)
-        emoji_lbl.setFixedSize(32, 32)
-        emoji_lbl.setAlignment(Qt.AlignCenter)
-        emoji_lbl.setFont(QFont("Segoe UI Emoji", 16))
+        # 左側顏色條
+        self._accent = QFrame()
+        self._accent.setFixedWidth(3)
+        self._accent.setStyleSheet("background: #3a3a3a;")
 
-        self._text_lbl = QLabel(label)
-        self._text_lbl.setFont(QFont("Segoe UI", 10))
-        self._text_lbl.setStyleSheet("color: #aaaaaa;")
-
-        self._dot = QFrame()
-        self._dot.setFixedSize(12, 12)
-        self._dot.setStyleSheet(
-            f"background: {self._COLORS['normal']}; border-radius: 6px;"
+        # badge（固定寬文字方塊）
+        badge_txt = self._BADGE_TEXT.get(key, key[:3].upper())
+        self._badge = QLabel(badge_txt)
+        self._badge.setFixedSize(40, 40)
+        self._badge.setAlignment(Qt.AlignCenter)
+        self._badge.setFont(QFont("Consolas", 8, QFont.Bold))
+        self._badge.setStyleSheet(
+            "background: #2a2a2a; color: #555555; border-radius: 6px; margin: 0 10px;"
         )
 
-        lay.addWidget(emoji_lbl)
-        lay.addWidget(self._text_lbl, 1)
-        lay.addWidget(self._dot)
+        # 文字欄
+        text_col = QVBoxLayout()
+        text_col.setSpacing(2)
+        text_col.setContentsMargins(0, 8, 0, 8)
+
+        self._title = QLabel(label)
+        self._title.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        self._title.setStyleSheet("color: #888888;")
+
+        self._sub = QLabel("待機中")
+        self._sub.setFont(QFont("Segoe UI", 8))
+        self._sub.setStyleSheet("color: #555555;")
+
+        text_col.addWidget(self._title)
+        text_col.addWidget(self._sub)
+
+        # 右側指示點
+        self._dot = QFrame()
+        self._dot.setFixedSize(8, 8)
+        self._dot.setStyleSheet("background: #3a3a3a; border-radius: 4px;")
+
+        lay.addWidget(self._accent)
+        lay.addWidget(self._badge)
+        lay.addLayout(text_col, 1)
+        lay.addWidget(self._dot, 0, Qt.AlignVCenter)
 
     def set_state(self, s: str):
         if s == self._cur_state:
             return
         self._cur_state = s
-        color = self._COLORS.get(s, self._COLORS["normal"])
-        self._dot.setStyleSheet(f"background: {color}; border-radius: 6px;")
-        txt_color = "#ffffff" if s != "normal" else "#aaaaaa"
-        self._text_lbl.setStyleSheet(f"color: {txt_color};")
+        c = self._COLORS.get(s, self._COLORS["normal"])
+
+        if s == "triggered":
+            self._accent.setStyleSheet(f"background: {c};")
+            self._badge.setStyleSheet(
+                f"background: {c}33; color: {c}; border-radius: 6px; margin: 0 10px;"
+            )
+            self._dot.setStyleSheet(f"background: {c}; border-radius: 4px;")
+            self._title.setStyleSheet("color: #ffffff;")
+            self._sub.setStyleSheet(f"color: {c};")
+        elif s == "condition":
+            self._accent.setStyleSheet(f"background: {c};")
+            self._badge.setStyleSheet(
+                f"background: {c}22; color: {c}; border-radius: 6px; margin: 0 10px;"
+            )
+            self._dot.setStyleSheet(f"background: {c}; border-radius: 4px;")
+            self._title.setStyleSheet("color: #dddddd;")
+            self._sub.setStyleSheet(f"color: {c};")
+        else:
+            self._accent.setStyleSheet("background: #3a3a3a;")
+            self._badge.setStyleSheet(
+                "background: #2a2a2a; color: #555555; border-radius: 6px; margin: 0 10px;"
+            )
+            self._dot.setStyleSheet("background: #3a3a3a; border-radius: 4px;")
+            self._title.setStyleSheet("color: #888888;")
+            self._sub.setStyleSheet("color: #555555;")
+
+        self._sub.setText(self._SUBTITLES.get(s, "待機中"))
 
 
 # ── LevelBar ─────────────────────────────────────────────────────────────────
@@ -256,40 +344,77 @@ class DashboardWindow(QMainWindow):
         self._video = VideoWidget()
         root.addWidget(self._video, 1)
 
-        # ── 右：控制面板 ─────────────────────────────────────────────────────
-        panel = QWidget()
-        panel.setFixedWidth(_PANEL_W)
-        panel.setStyleSheet("background: #1a1a1a;")
-        pv = QVBoxLayout(panel)
-        pv.setContentsMargins(0, 0, 0, 0)
-        pv.setSpacing(6)
+        # ── 右：手機通知面板 ──────────────────────────────────────────────────
+        # 外框：模擬手機外殼
+        phone_outer = QFrame()
+        phone_outer.setFixedWidth(_PANEL_W)
+        phone_outer.setStyleSheet(
+            "QFrame { background: #111111; border-radius: 20px;"
+            " border: 2px solid #2a2a2a; }"
+        )
+        po_lay = QVBoxLayout(phone_outer)
+        po_lay.setContentsMargins(0, 0, 0, 12)
+        po_lay.setSpacing(0)
+
+        # 狀態欄
+        self._phone_bar = PhoneStatusBar()
+        po_lay.addWidget(self._phone_bar)
+
+        # 螢幕內容區
+        screen = QWidget()
+        screen.setStyleSheet("background: #161616;")
+        sv = QVBoxLayout(screen)
+        sv.setContentsMargins(8, 8, 8, 8)
+        sv.setSpacing(6)
 
         # 警告等級
-        lvl_box = self._section("警告等級")
         self._level_bar = LevelBar()
-        lvl_box.layout().addWidget(self._level_bar)
-        pv.addWidget(lvl_box)
+        sv.addWidget(self._level_bar)
 
-        # 違規指示燈
-        icons_box = self._section("違規指示")
+        # 通知區塊標題
+        notif_hdr = QLabel("通知")
+        notif_hdr.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        notif_hdr.setStyleSheet("color: #555555; padding: 4px 2px 2px 2px;")
+        sv.addWidget(notif_hdr)
+
+        # 通知卡片（分隔線）
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet("color: #2a2a2a;")
+        sv.addWidget(sep)
+
         self._icons = {
-            "phone":    AlertIcon("📱", "手機操作"),
-            "smoke":    AlertIcon("🚬", "吸菸行為"),
-            "fatigue":  AlertIcon("😴", "疲勞駕駛"),
-            "distract": AlertIcon("👁",  "視線分心"),
+            "phone":    NotificationCard("phone",    "手機操作"),
+            "smoke":    NotificationCard("smoke",    "吸菸行為"),
+            "fatigue":  NotificationCard("fatigue",  "疲勞駕駛"),
+            "distract": NotificationCard("distract", "視線分心"),
         }
-        for ico in self._icons.values():
-            icons_box.layout().addWidget(ico)
-        pv.addWidget(icons_box)
+        for card in self._icons.values():
+            sv.addWidget(card)
+            div = QFrame()
+            div.setFrameShape(QFrame.HLine)
+            div.setStyleSheet("color: #222222;")
+            sv.addWidget(div)
 
         # 模型狀態
-        stat_box = self._section("模型狀態")
-        self._status = StatusPanel()
-        stat_box.layout().addWidget(self._status)
-        pv.addWidget(stat_box)
+        stat_lbl = QLabel("模型狀態")
+        stat_lbl.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        stat_lbl.setStyleSheet("color: #555555; padding: 4px 2px 2px 2px;")
+        sv.addWidget(stat_lbl)
 
-        # 按鈕
-        btn_row = QHBoxLayout()
+        self._status = StatusPanel()
+        sv.addWidget(self._status)
+
+        sv.addStretch()
+        po_lay.addWidget(screen, 1)
+
+        # 按鈕列（面板外底部）
+        btn_outer = QWidget()
+        btn_outer.setStyleSheet("background: transparent;")
+        btn_row = QHBoxLayout(btn_outer)
+        btn_row.setContentsMargins(8, 6, 8, 0)
+        btn_row.setSpacing(6)
+
         btn_calib = QPushButton("重新校準 (C)")
         btn_calib.clicked.connect(lambda: recalib_event.set())
         btn_calib.setStyleSheet(self._btn_css("#2980b9"))
@@ -300,10 +425,9 @@ class DashboardWindow(QMainWindow):
 
         btn_row.addWidget(btn_calib)
         btn_row.addWidget(btn_quit)
-        pv.addLayout(btn_row)
-        pv.addStretch()
+        po_lay.addWidget(btn_outer)
 
-        root.addWidget(panel)
+        root.addWidget(phone_outer)
 
     def _section(self, title: str) -> QGroupBox:
         box = QGroupBox(title)
@@ -327,6 +451,7 @@ class DashboardWindow(QMainWindow):
 
     # ── 定時刷新 ─────────────────────────────────────────────────────────────
     def _refresh(self):
+        self._phone_bar.tick()
         # 拉最新影格（排空過期幀）
         frame_raw    = None
         display_fid  = self._last_fid

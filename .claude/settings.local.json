@@ -31,7 +31,13 @@
       "PowerShell(conda run -n goshare pip install retina-face 2>&1)",
       "Bash(git pull *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(mkdir -p _trash/yolov8 _trash/pics _trash/ResNet _trash/MediaPipe)",
+      "Bash(mv Old_md _trash/)",
+      "Bash(mv yolov8/monitor.py _trash/yolov8/)",
+      "Bash(mv yolov8/suggestions.md _trash/yolov8/)",
+      "Bash(mv yolov8/rules _trash/yolov8/)"
     ]
   }
 }

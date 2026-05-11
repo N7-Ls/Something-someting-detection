@@ -1,4 +1,5 @@
 yolov8/output/
+_trash/
 
 # Windows reserved device name (cannot be handled by git on Windows)
 nul

@@ -168,8 +168,10 @@ def thread_decision():
             phone_by_wrist = False
             if yolo and face and yolo["wrist_xy"] and face["mouth_xy"]:
                 face_y = face["mouth_xy"][1]
+                fw     = face.get("face_width") or 80
                 for wx, wy in yolo["wrist_xy"]:
-                    if wy < face_y * 1.25:
+                    # 手腕在嘴部上方，或低於嘴部不超過 2 倍臉寬（手舉至臉旁的正常持機範圍）
+                    if wy < face_y + fw * 2.0:
                         phone_by_wrist = True
                         break
             phone_cond = phone_by_bbox or phone_by_gaze or phone_by_wrist
