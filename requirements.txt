@@ -1,23 +1,51 @@
+# ============================================================
+# Conda environment: goshare
+# Python version:   3.12.12
+# Platform:         win-64
+# Last updated:     2026-05-05
+# ============================================================
+
 # Core vision & detection
-opencv-python
-numpy
-mediapipe
-ultralytics
+opencv-python==4.13.0.92
+opencv-contrib-python==4.13.0.92
+numpy==2.4.3
+mediapipe==0.10.33
+ultralytics==8.4.32
 
 # Deep learning
-tensorflow
+tensorflow==2.21.0
+torch==2.11.0
+torchvision==0.26.0
+keras==3.13.2
+
+# Scientific computing
+scipy==1.17.1
+scikit-image==0.26.0
+pillow==12.1.1
+onnxruntime==1.24.3
 
 # GUI
-PyQt5
+PyQt5==5.15.11
 
 # Face recognition
-uniface
-deepface
-retinaface
+uniface==3.1.0
+# deepface     # not installed in current env
+# retinaface   # not installed in current env
+
+# Data processing
+polars==1.39.3
+pyyaml==6.0.3
+tqdm==4.67.3
+
+# AI / Model hub
+huggingface-hub==1.12.0
 
 # HTTP & misc
-requests
-matplotlib
+requests==2.32.5
+matplotlib==3.10.8
+psutil==7.2.2
+sounddevice==0.5.5
+rich==14.3.3
 
 # Serial communication (optional, used in yolov8/monitor.py)
-pyserial
+# pyserial     # not installed in current env
