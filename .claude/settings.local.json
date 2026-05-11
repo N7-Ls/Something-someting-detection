@@ -14,7 +14,21 @@
       "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\言\\\\.claude\\\\projects\\\\c--program1-NCHU-4112060004-NCHU-4112060004-1142-goshare\\\\memory\")",
       "Bash(Out-Null)",
       "Bash(Write-Output \"done\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\program1\\\\NCHU_4112060004\\\\NCHU_4112060004\\\\1142\\\\goshare\\\\Old_md\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\program1\\\\NCHU_4112060004\\\\NCHU_4112060004\\\\1142\\\\goshare\\\\Old_md\")",
+      "Bash(conda --version)",
+      "Bash(conda info *)",
+      "Bash(conda create *)",
+      "Bash(conda run *)",
+      "Bash(C:/Users/言/.conda/envs/goshare/python.exe -c \"import cv2, numpy, mediapipe, ultralytics, PyQt5, requests, matplotlib, serial, tensorflow, deepface, uniface; print\\('cv2:', cv2.__version__\\); print\\('numpy:', numpy.__version__\\); print\\('tf:', tensorflow.__version__\\); print\\('ultralytics:', ultralytics.__version__\\); print\\('All OK'\\)\")",
+      "Bash(C:/Users/言/.conda/envs/goshare/python.exe -m pip install uniface[gpu])",
+      "Bash(pip show *)",
+      "Bash(Select-String -Pattern \"^Name:|^Version:|^---$|WARNING|ERROR\")",
+      "PowerShell(python --version)",
+      "PowerShell(pip --version)",
+      "PowerShell(conda info --envs 2>&1)",
+      "PowerShell(conda run -n goshare pip show uniface retinaface 2>&1)",
+      "PowerShell(conda run -n goshare python -c \"import PyQt5; import os; print\\(os.path.dirname\\(PyQt5.__file__\\)\\)\")",
+      "PowerShell(conda run -n goshare pip install retina-face 2>&1)"
     ]
   }
 }

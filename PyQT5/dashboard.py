@@ -8,6 +8,17 @@ GoShare Driver Monitor — PyQt5 儀表板
 """
 import os
 import sys
+
+# Fix Qt platform plugin not found on Windows when running outside conda activate
+def _fix_qt_plugin_path():
+    import importlib.util
+    spec = importlib.util.find_spec("PyQt5")
+    if spec and spec.submodule_search_locations:
+        qt5_plugins = os.path.join(list(spec.submodule_search_locations)[0], "Qt5", "plugins")
+        if os.path.isdir(qt5_plugins):
+            os.environ.setdefault("QT_QPA_PLATFORM_PLUGIN_PATH", qt5_plugins)
+_fix_qt_plugin_path()
+
 import queue as _queue
 import threading
 import time
@@ -348,7 +359,7 @@ class DashboardWindow(QMainWindow):
 
         # 更新影格
         if frame_raw is not None:
-            annotated = annotate(frame_raw, snap, self._fps_val, display_fid)
+            annotated = annotate(frame_raw, snap, self._fps_val, display_fid, minimal=True)
             self._video.set_frame(annotated)
 
         # 更新各面板

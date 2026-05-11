@@ -14,7 +14,12 @@ LEVEL_COLOR = {
 }
 
 
-def annotate(frame, state: dict, fps: float, display_frame_id: int = 0):
+def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
+             minimal: bool = False):
+    """
+    minimal=True：PyQt5 模式，只保留偵測框/關鍵點/外框色，省略文字面板與警報覆蓋
+    （PyQt5 右側面板已顯示相同資訊，避免重複）
+    """
     h, w = frame.shape[:2]
     out   = frame.copy()
     level = state["alert_level"]
@@ -56,7 +61,10 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0):
     for (px, py) in state["face_pts"]:
         cv2.circle(out, (int(px), int(py)), 3, (255, 255, 255), -1)
 
-    # ── 左側資訊面板 ──
+    if minimal:
+        return out
+
+    # ── 左側資訊面板（cv2 獨立模式，PyQt5 模式已由 StatusPanel 顯示）──
     ear_v    = state["ear_val"]
     yaw_v    = state["yaw"]
     roll_v   = state["roll"]
@@ -101,7 +109,6 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0):
         (f"FPS  : {fps:.1f}",                                                  (200, 200, 200)),
     ]
 
-    # YOLO 影格落差：若 YOLO 比當前顯示幀落後超過 8 幀，以黃色警示
     yolo_fid = state.get("yolo_frame_id", 0)
     face_fid = state.get("face_frame_id", 0)
     yolo_lag = display_frame_id - yolo_fid
