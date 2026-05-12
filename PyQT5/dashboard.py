@@ -89,7 +89,7 @@ class VideoWidget(QLabel):
 
 # ── PhoneStatusBar ────────────────────────────────────────────────────────────
 class PhoneStatusBar(QWidget):
-    """模擬手機頂部狀態欄（時間 + 應用名稱）。"""
+    """模擬手機頂部狀態欄"""
 
     def __init__(self):
         super().__init__()
@@ -118,7 +118,7 @@ class PhoneStatusBar(QWidget):
 
 # ── NotificationCard ──────────────────────────────────────────────────────────
 class NotificationCard(QWidget):
-    """手機通知卡片樣式的違規指示器（無 emoji）。"""
+    """手機通知卡片樣式的違規指示器"""
 
     _COLORS = {
         "normal":    "#3a3a3a",
@@ -374,7 +374,7 @@ class DashboardWindow(QMainWindow):
         # 通知區塊標題
         notif_hdr = QLabel("通知")
         notif_hdr.setFont(QFont("Segoe UI", 8, QFont.Bold))
-        notif_hdr.setStyleSheet("color: #555555; padding: 4px 2px 2px 2px;")
+        notif_hdr.setStyleSheet("color: #dddddd; padding: 4px 2px 2px 2px;")
         sv.addWidget(notif_hdr)
 
         # 通知卡片（分隔線）
@@ -399,7 +399,7 @@ class DashboardWindow(QMainWindow):
         # 模型狀態
         stat_lbl = QLabel("模型狀態")
         stat_lbl.setFont(QFont("Segoe UI", 8, QFont.Bold))
-        stat_lbl.setStyleSheet("color: #555555; padding: 4px 2px 2px 2px;")
+        stat_lbl.setStyleSheet("color: #dddddd; padding: 4px 2px 2px 2px;")
         sv.addWidget(stat_lbl)
 
         self._status = StatusPanel()

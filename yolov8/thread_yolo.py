@@ -55,7 +55,7 @@ def _load_cig_model():
 
 def thread_yolo():
     try:
-        model_pose = YOLO("yolov8n-pose.pt")
+        model_pose = YOLO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "yolov8n-pose.pt"))
     except Exception as e:
         logging.error(f"pose 模型載入失敗：{e}")
         return
@@ -106,12 +106,12 @@ def thread_yolo():
                 kps_xy   = res_pose.keypoints[0].xy.cpu().numpy()
                 kps_conf = res_pose.keypoints[0].conf.cpu().numpy()
                 for idx in [9, 10]:          # 手腕
-                    if idx < len(kps_xy) and kps_conf[idx] > 0.15:
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.08:
                         x, y = kps_xy[idx]
                         if x > 0 and y > 0:
                             wrists.append((float(x), float(y)))
                 for idx in [7, 8]:           # 手肘
-                    if idx < len(kps_xy) and kps_conf[idx] > 0.20:
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.10:
                         x, y = kps_xy[idx]
                         if x > 0 and y > 0:
                             elbows.append((float(x), float(y)))
@@ -125,15 +125,15 @@ def thread_yolo():
 
             def _phone_roi_scan(ax, ay, extend_down: bool):
                 if extend_down:
-                    rx1 = max(0,      int(ax - pad * 0.9))
-                    rx2 = min(fw_img, int(ax + pad * 0.9))
-                    ry1 = max(0,      int(ay - pad * 0.3))
-                    ry2 = min(fh,     int(ay + pad * 2.0))
+                    rx1 = max(0,      int(ax - pad * 1.1))
+                    rx2 = min(fw_img, int(ax + pad * 1.1))
+                    ry1 = max(0,      int(ay - pad * 0.5))
+                    ry2 = min(fh,     int(ay + pad * 2.5))
                 else:
-                    rx1 = max(0,      int(ax - pad))
-                    rx2 = min(fw_img, int(ax + pad))
-                    ry1 = max(0,      int(ay - pad * 1.4))
-                    ry2 = min(fh,     int(ay + pad * 0.6))
+                    rx1 = max(0,      int(ax - pad * 1.3))
+                    rx2 = min(fw_img, int(ax + pad * 1.3))
+                    ry1 = max(0,      int(ay - pad * 1.8))
+                    ry2 = min(fh,     int(ay + pad * 1.5))
                 if (rx2 - rx1) < 32 or (ry2 - ry1) < 32:
                     return
                 roi    = frame[ry1:ry2, rx1:rx2]
@@ -163,6 +163,20 @@ def thread_yolo():
                 for ex, ey in elbows:
                     if ey < fh * 0.75:
                         _phone_roi_scan(ex, ey, extend_down=True)
+            else:
+                # 全畫面 fallback：關節完全未偵測時，掃上 3/4 畫面
+                roi_h = int(fh * 0.75)
+                res_fb = model_phone(frame[:roi_h], verbose=False,
+                                     conf=0.50, imgsz=YOLO_IMGSZ)[0]
+                if res_fb.boxes is not None:
+                    for box in res_fb.boxes:
+                        if int(box.cls[0]) != phone_cls:
+                            continue
+                        bx1, by1, bx2, by2 = box.xyxy[0].cpu().numpy()
+                        conf_v = float(box.conf[0])
+                        logging.debug(f"Phone fullframe hit: conf={conf_v:.2f}")
+                        result["phone_detected"] = True
+                        phone_boxes.append((bx1, by1, bx2, by2, conf_v))
 
             # 香菸模型依時間間隔推論，避免丟幀導致間隔不穩定
             _now = time.perf_counter()
