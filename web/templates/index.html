@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>駕駛安全監控系統</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0d0d12;
+    color: #e2e2e8;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+    gap: 18px;
+}
+
+/* ── Header ── */
+.header {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+}
+.btn-sm {
+    padding: 7px 16px;
+    border-radius: 7px;
+    border: 1px solid #333;
+    background: #1c1c26;
+    color: #b0b0c0;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-sm:hover { background: #2a2a38; color: #e2e2e8; }
+
+/* ── Steps ── */
+.steps {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 720px;
+    gap: 0;
+}
+.step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 4px;
+    border-radius: 10px;
+    opacity: 0.35;
+    transition: opacity 0.3s;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #ccc;
+}
+.step .num {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: #2a2a38;
+    border: 2px solid #444;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem;
+    transition: background 0.3s, border-color 0.3s;
+}
+.step.active   { opacity: 1; }
+.step.active .num  { background: #2563eb; border-color: #3b82f6; color: #fff; }
+.step.done     { opacity: 0.8; }
+.step.done .num    { background: #16a34a; border-color: #22c55e; color: #fff; }
+.step-sep {
+    flex-shrink: 0;
+    width: 28px;
+    height: 2px;
+    background: #2a2a38;
+    margin-bottom: 24px;
+}
+
+/* ── Camera ── */
+.camera-wrap {
+    width: 100%;
+    max-width: 720px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #12121a;
+    border: 1px solid #1e1e2e;
+    position: relative;
+    aspect-ratio: 16/9;
+}
+.camera-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Alert overlay (driving phase) */
+.alert-overlay {
+    display: none;
+    position: absolute;
+    top: 12px; right: 12px;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+.alert-overlay.visible { display: flex; }
+.alert-chip {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    backdrop-filter: blur(6px);
+    background: rgba(0,0,0,0.55);
+    border: 1.5px solid #444;
+    color: #ccc;
+    transition: border-color 0.3s, color 0.3s;
+}
+.alert-chip.level-0 { border-color: #22c55e; color: #22c55e; }
+.alert-chip.level-1 { border-color: #eab308; color: #eab308; }
+.alert-chip.level-2 { border-color: #f97316; color: #f97316; }
+.alert-chip.level-3 { border-color: #ef4444; color: #ef4444; }
+
+/* Register hint banner */
+.notice {
+    width: 100%;
+    max-width: 720px;
+    background: #1e1a08;
+    border: 1px solid #52400a;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.84rem;
+    color: #d4a600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.notice.hidden { display: none; }
+
+/* ── Status panel ── */
+.status-panel {
+    width: 100%;
+    max-width: 720px;
+    background: #13131d;
+    border: 1px solid #1e1e2e;
+    border-radius: 14px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.status-msg {
+    font-size: 1rem;
+    line-height: 1.55;
+    min-height: 1.55em;
+    color: #e2e2e8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.spinner {
+    flex-shrink: 0;
+    width: 17px; height: 17px;
+    border: 2px solid #333;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+button {
+    padding: 10px 24px;
+    border-radius: 9px;
+    border: none;
+    font-size: 0.93rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+}
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:not(:disabled):active { transform: scale(0.97); }
+
+.btn-primary  { background: #2563eb; color: #fff; }
+.btn-primary:not(:disabled):hover  { filter: brightness(1.15); }
+.btn-success  { background: #16a34a; color: #fff; }
+.btn-success:not(:disabled):hover  { filter: brightness(1.15); }
+.btn-danger   { background: #dc2626; color: #fff; }
+.btn-danger:not(:disabled):hover   { filter: brightness(1.15); }
+.btn-ghost    { background: #1e1e2e; color: #c0c0d0; border: 1px solid #2e2e40; }
+.btn-ghost:not(:disabled):hover    { background: #2a2a3e; }
+
+/* ── Register Modal ── */
+.modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+}
+.modal-bg.open { display: flex; }
+.modal {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 18px;
+    padding: 30px 28px;
+    width: 400px;
+    max-width: 94vw;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.modal h2 { font-size: 1.05rem; color: #fff; }
+.modal p  { font-size: 0.85rem; color: #888; }
+.file-input-wrap {
+    border: 1.5px dashed #2e2e40;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #666;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.file-input-wrap:hover { border-color: #3b82f6; color: #aaa; }
+.file-input-wrap input { display: none; }
+#reg-filename { font-size: 0.82rem; color: #3b82f6; margin-top: 4px; }
+#reg-msg {
+    font-size: 0.84rem;
+    min-height: 1.4em;
+    color: #888;
+}
+.modal-btns { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>駕駛安全監控系統</h1>
+    <button class="btn-sm" onclick="openRegModal()">註冊人臉</button>
+</div>
+
+<!-- 步驟指示 -->
+<div class="steps">
+    <div class="step active" id="step-face">
+        <div class="num">1</div>
+        <div>人臉辨識</div>
+    </div>
+    <div class="step-sep"></div>
+    <div class="step" id="step-helmet">
+        <div class="num">2</div>
+        <div>安全帽確認</div>
+    </div>
+    <div class="step-sep"></div>
+    <div class="step" id="step-drive">
+        <div class="num">3</div>
+        <div>行駛監控</div>
+    </div>
+</div>
+
+{% if not registered %}
+<div class="notice" id="notice-reg">
+    <span>⚠</span>
+    <span>尚未註冊人臉。請先點右上角「<strong>註冊人臉</strong>」上傳照片，才能進行身份驗證。</span>
+</div>
+{% endif %}
+
+<!-- 攝影機 -->
+<div class="camera-wrap">
+    <img id="feed" src="/video_feed" alt="camera feed">
+    <div class="alert-overlay" id="alert-overlay">
+        <div class="alert-chip level-0" id="alert-chip">正常行駛</div>
+    </div>
+</div>
+
+<!-- 狀態面板 -->
+<div class="status-panel">
+    <div class="status-msg" id="status-msg">連線中...</div>
+    <div class="btn-row" id="btn-row"></div>
+</div>
+
+<!-- 人臉註冊 Modal -->
+<div class="modal-bg" id="modal">
+    <div class="modal">
+        <h2>註冊人臉</h2>
+        <p>上傳一張清晰的正面照，照片中只能有一張人臉。</p>
+        <label class="file-input-wrap">
+            <div>點此選擇照片</div>
+            <div id="reg-filename"></div>
+            <input type="file" id="reg-file" accept="image/*" onchange="onFileChange(this)">
+        </label>
+        <div id="reg-msg"></div>
+        <div class="modal-btns">
+            <button class="btn-primary" onclick="registerFace()">上傳並註冊</button>
+            <button class="btn-ghost" onclick="closeRegModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── 狀態輪詢 ────────────────────────────────────────────────────────────────
+let _phase     = "face_verify";
+let _analyzing = false;
+let _lastBtnKey = "";
+
+async function pollState() {
+    try {
+        const data = await (await fetch("/api/state")).json();
+        applyState(data);
+    } catch (_) {}
+}
+setInterval(pollState, 700);
+pollState();
+
+function applyState(s) {
+    _phase     = s.phase;
+    _analyzing = s.analyzing;
+
+    // 步驟指示
+    const phases = ["face_verify", "helmet_check", "driving"];
+    const idx     = phases.indexOf(s.phase);
+    document.getElementById("step-face").className   = "step " + (idx === 0 ? "active" : idx > 0 ? "done" : "");
+    document.getElementById("step-helmet").className = "step " + (idx === 1 ? "active" : idx > 1 ? "done" : "");
+    document.getElementById("step-drive").className  = "step " + (idx === 2 ? "active" : "");
+
+    // 狀態訊息
+    const msgEl = document.getElementById("status-msg");
+    if (s.analyzing) {
+        msgEl.innerHTML = '<div class="spinner"></div>' + escHtml(s.message);
+    } else {
+        msgEl.textContent = s.message;
+    }
+
+    // 按鈕
+    renderBtns(s);
+
+    // 行駛警報
+    const overlay = document.getElementById("alert-overlay");
+    const chip    = document.getElementById("alert-chip");
+    if (s.phase === "driving") {
+        overlay.classList.add("visible");
+        const lvl = s.alert_level || 0;
+        chip.className = "alert-chip level-" + lvl;
+        chip.textContent = ["正常行駛", "注意：分心駕駛", "警告：危險行為", "緊急：立即停車"][lvl] || "正常行駛";
+    } else {
+        overlay.classList.remove("visible");
+    }
+}
+
+function renderBtns(s) {
+    const key = s.phase + "|" + s.analyzing + "|" + (s.helmet_status || "");
+    if (key === _lastBtnKey) return;
+    _lastBtnKey = key;
+
+    const row = document.getElementById("btn-row");
+    row.innerHTML = "";
+
+    if (s.phase === "face_verify") {
+        addBtn(row, "btn-primary", "開始驗證", verifyFace, s.analyzing);
+
+    } else if (s.phase === "helmet_check") {
+        addBtn(row, "btn-primary", "偵測安全帽", checkHelmet, s.analyzing);
+        if (s.helmet_status === "fastened") {
+            addBtn(row, "btn-success", "開始行駛監控 →", startDriving, false);
+        }
+
+    } else if (s.phase === "driving") {
+        addBtn(row, "btn-danger", "停止監控", stopDriving, false);
+    }
+}
+
+function addBtn(container, cls, label, handler, disabled) {
+    const btn = document.createElement("button");
+    btn.className   = cls;
+    btn.textContent = label;
+    btn.disabled    = disabled;
+    btn.onclick     = handler;
+    container.appendChild(btn);
+}
+
+// ── API 呼叫 ────────────────────────────────────────────────────────────────
+async function post(url) {
+    try { await fetch(url, { method: "POST" }); } catch (_) {}
+    pollState();
+}
+
+function verifyFace()   { post("/api/verify_face"); }
+function checkHelmet()  { post("/api/check_helmet"); }
+function startDriving() { post("/api/start_driving"); }
+function stopDriving()  { post("/api/stop_driving"); }
+
+// ── 人臉註冊 Modal ───────────────────────────────────────────────────────────
+function openRegModal()  { document.getElementById("modal").classList.add("open"); }
+function closeRegModal() { document.getElementById("modal").classList.remove("open"); }
+
+function onFileChange(input) {
+    const nameEl = document.getElementById("reg-filename");
+    nameEl.textContent = input.files[0] ? input.files[0].name : "";
+    document.getElementById("reg-msg").textContent = "";
+    document.getElementById("reg-msg").style.color = "";
+}
+
+async function registerFace() {
+    const file = document.getElementById("reg-file").files[0];
+    const msg  = document.getElementById("reg-msg");
+    if (!file) { msg.textContent = "請選擇一張照片"; return; }
+
+    msg.style.color  = "#888";
+    msg.textContent  = "上傳中，請稍候...";
+
+    const fd = new FormData();
+    fd.append("photo", file);
+
+    try {
+        const data = await (await fetch("/api/register", { method: "POST", body: fd })).json();
+        if (data.status === "registered") {
+            msg.style.color = "#22c55e";
+            msg.textContent = "註冊成功！";
+            const notice = document.getElementById("notice-reg");
+            if (notice) notice.classList.add("hidden");
+            setTimeout(closeRegModal, 1400);
+        } else {
+            const errMap = {
+                "no face detected":        "未偵測到人臉，請換一張正面清晰照",
+                "multiple faces detected": "照片中有多張人臉，請只保留一張",
+                "invalid image":           "圖片格式無效",
+            };
+            msg.style.color = "#ef4444";
+            msg.textContent = "錯誤：" + (errMap[data.error] || data.error || "未知錯誤");
+        }
+    } catch (e) {
+        msg.style.color = "#ef4444";
+        msg.textContent = "網路錯誤，請重試";
+    }
+}
+
+// ── 工具函式 ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
+</body>
+</html>

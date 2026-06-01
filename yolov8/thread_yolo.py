@@ -15,7 +15,7 @@ import queue
 import time
 import state
 from config import (
-    YOLO_PHONE_CONF, YOLO_IMGSZ, YOLO_POSE_IMGSZ, YOLO_CIG_CONF,
+    YOLO_PHONE_CONF, YOLO_IMGSZ, YOLO_POSE_IMGSZ, YOLO_PHONE_IMGSZ, YOLO_CIG_CONF,
     CIG_INTERVAL_SEC, PHONE_ROI_PAD,
 )
 from state  import queue_pose, queue_decision, stop_event, display_state, display_lock
@@ -100,6 +100,9 @@ def thread_yolo():
             fh, fw_img = frame.shape[:2]
 
             # ── Step 1: Pose → 手腕 + 手肘 ──────────────────────────────────
+            # 注意：若攝影機視角讓 pose 永遠偵測不到關節（wrists=0, elbows=0），
+            # 可將下方 pose 推論整段註解掉以省去每幀 50-100ms，
+            # 手機偵測會直接走全圖 fallback，抽菸偵測則僅依賴香菸模型。
             elbows = []
             res_pose = model_pose(frame, verbose=False, imgsz=YOLO_POSE_IMGSZ)[0]
             if res_pose.keypoints is not None and len(res_pose.keypoints) > 0:
@@ -164,17 +167,16 @@ def thread_yolo():
                     if ey < fh * 0.75:
                         _phone_roi_scan(ex, ey, extend_down=True)
             else:
-                # 全畫面 fallback：關節完全未偵測時，掃上 3/4 畫面
-                roi_h = int(fh * 0.75)
-                res_fb = model_phone(frame[:roi_h], verbose=False,
-                                     conf=0.50, imgsz=YOLO_IMGSZ)[0]
+                # 全畫面 fallback：關節完全未偵測時，掃全幅畫面
+                res_fb = model_phone(frame, verbose=False,
+                                     conf=YOLO_PHONE_CONF, imgsz=YOLO_PHONE_IMGSZ)[0]
                 if res_fb.boxes is not None:
                     for box in res_fb.boxes:
                         if int(box.cls[0]) != phone_cls:
                             continue
                         bx1, by1, bx2, by2 = box.xyxy[0].cpu().numpy()
                         conf_v = float(box.conf[0])
-                        logging.debug(f"Phone fullframe hit: conf={conf_v:.2f}")
+                        logging.info(f"[phone] fullframe hit: conf={conf_v:.2f}")
                         result["phone_detected"] = True
                         phone_boxes.append((bx1, by1, bx2, by2, conf_v))
 

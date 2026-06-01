@@ -28,7 +28,7 @@ onnxruntime==1.24.3
 PyQt5==5.15.11
 
 # Face recognition
-uniface==3.1.0
+uniface[cpu]==3.1.0   # use uniface[gpu] if using onnxruntime-gpu instead
 # deepface     # not installed in current env
 # retinaface   # not installed in current env
 
@@ -39,6 +39,9 @@ tqdm==4.67.3
 
 # AI / Model hub
 huggingface-hub==1.12.0
+
+# Web server
+flask>=3.0.0
 
 # HTTP & misc
 requests==2.32.5

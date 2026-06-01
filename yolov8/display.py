@@ -1,10 +1,48 @@
 """
 畫面標註：將 display_state 快照渲染到影格上。
 """
+import os
 import cv2
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from config import (
     EAR_THRESHOLD, YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT, WRIST_MOUTH_RATIO,
 )
+
+_font_cache: dict = {}
+
+def _get_chinese_font(size: int):
+    if size in _font_cache:
+        return _font_cache[size]
+    candidates = [
+        r"C:\Windows\Fonts\msjh.ttc",
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\simsun.ttc",
+    ]
+    font = ImageFont.load_default()
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                font = ImageFont.truetype(path, size)
+                break
+            except Exception:
+                continue
+    _font_cache[size] = font
+    return font
+
+
+def _put_chinese_text(frame, text: str, xy: tuple, font_size: int, color_bgr: tuple, outline_color=(0, 0, 0)):
+    pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(pil)
+    font = _get_chinese_font(font_size)
+    x, y = xy
+    for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        draw.text((x + dx, y + dy), text, font=font,
+                  fill=(outline_color[2], outline_color[1], outline_color[0]))
+    r, g, b = int(color_bgr[2]), int(color_bgr[1]), int(color_bgr[0])
+    draw.text((x, y), text, font=font, fill=(r, g, b))
+    return cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
+
 
 LEVEL_COLOR = {
     0: (0, 200, 0),
@@ -139,8 +177,7 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
         overlay3 = out.copy()
         cv2.rectangle(overlay3, (0, 0), (w, 28), banner_color, -1)
         cv2.addWeighted(overlay3, 0.75, out, 0.25, 0, out)
-        cv2.putText(out, calib_txt, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.56, (0, 0, 0), 3)
-        cv2.putText(out, calib_txt, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.56, (255, 255, 255), 1)
+        out = _put_chinese_text(out, calib_txt, (8, 4), 20, (255, 255, 255))
 
     # ── 底部警報訊息 ──
     if state["alert_msg"]:
@@ -148,10 +185,7 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
         overlay2 = out.copy()
         cv2.rectangle(overlay2, (0, h - bar_h), (w, h), color, -1)
         cv2.addWeighted(overlay2, 0.65, out, 0.35, 0, out)
-        cv2.putText(out, state["alert_msg"], (12, h - 12),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.68, (0, 0, 0), 4)
-        cv2.putText(out, state["alert_msg"], (12, h - 12),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.68, (255, 255, 255), 2)
+        out = _put_chinese_text(out, state["alert_msg"], (12, h - 38), 24, (255, 255, 255))
 
     # ── Level 2：右上角速限徽章（30 km/h）──
     if level == 2:

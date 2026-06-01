@@ -37,7 +37,11 @@
       "Bash(mv Old_md _trash/)",
       "Bash(mv yolov8/monitor.py _trash/yolov8/)",
       "Bash(mv yolov8/suggestions.md _trash/yolov8/)",
-      "Bash(mv yolov8/rules _trash/yolov8/)"
+      "Bash(mv yolov8/rules _trash/yolov8/)",
+      "Bash(mkdir -p \"c:/Users/User/Documents/AI_Product/Something-someting-detection/web/templates\" && echo \"done\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\User\\Documents\\AI_Product\\Something-someting-detection\\web"
     ]
   }
 }
