@@ -15,7 +15,11 @@
                                       ↓
                                  display_state (Lock)
                                       ↓
-                         主執行緒 UI (cv2 / PyQt5)
+                         主執行緒 UI (PyQt5 dashboard)
+
+Helmet/
+  攝影機 → preprocess_head (YOLOv8 pose 頭部裁切)
+               → camera_helmet_detect (Gemma3:27B API 安全帽判斷)
 ```
 
 ---
@@ -34,128 +38,149 @@
 ## 檔案結構
 
 ```
-goshare/
-├── yolov8/                  # 核心監控模組（多執行緒）
-│   ├── main.py
-│   ├── config.py
-│   ├── state.py
-│   ├── utils.py
-│   ├── display.py
-│   ├── thread_capture.py
-│   ├── thread_yolo.py
-│   ├── thread_mediapipe.py
-│   ├── thread_decision.py
-│   ├── monitor.py           # 舊版單檔（不使用）
-│   ├── face_landmarker.task # MediaPipe 人臉模型（LFS）
-│   ├── yolov8n.pt           # YOLOv8n 通用偵測模型（LFS）
-│   ├── yolov8n-pose.pt      # YOLOv8n 姿態偵測模型（LFS）
-│   └── yolov8n_phone.pt     # 手機專用自訓練模型（LFS）
+Goshare/
+├── yolov8/                      # 核心監控模組（多執行緒）
+│   ├── main.py                  # cv2 模式入口（開發用）
+│   ├── config.py                # 所有可調參數
+│   ├── state.py                 # 跨執行緒共享狀態
+│   ├── utils.py                 # 純工具函式
+│   ├── display.py               # 畫面標註渲染
+│   ├── thread_capture.py        # 影像擷取執行緒
+│   ├── thread_yolo.py           # YOLOv8 推論執行緒
+│   ├── thread_mediapipe.py      # MediaPipe 推論執行緒
+│   ├── thread_decision.py       # 決策 / 計時 / CSV 執行緒
+│   ├── face_landmarker.task     # MediaPipe 人臉模型
+│   ├── yolov8n-pose.pt          # YOLOv8n 姿態偵測模型
+│   ├── yolov8s.pt               # YOLOv8s 手機偵測模型（COCO）
+│   └── yolov8n_cigarette.pt     # 香菸自訓練模型（HF: basant18/Smoking-detection-YOLO26s）
 ├── PyQT5/
-│   └── dashboard.py         # PyQt5 圖形儀表板
+│   └── dashboard.py             # PyQt5 圖形儀表板（主要執行入口）
+├── Helmet/
+│   ├── camera_helmet_detect.py  # 即時安全帽偵測（Gemma3:27B API）
+│   ├── preprocess_head.py       # YOLOv8 pose 頭部裁切前處理
+│   └── yolov8n-pose.pt          # 姿態模型（Helmet 模組獨立使用）
 ├── ResNet/
-│   ├── register_user.py     # 人臉特徵向量註冊
-│   └── verify_user.py       # 人臉身分驗證
+│   ├── register_user.py         # 人臉特徵向量註冊
+│   └── verify_user.py           # 人臉身分驗證
 ├── MediaPipe/
-│   └── helmet_detection.py  # 安全帽偵測（實驗性）
-├── llava_anlmage_27b_2/
-│   └── llava_anlmage_27b_2.py  # LLaVA 多模態影像分析、用來快速辨識是否配戴安全帽
-├── pics/                    # UI 示意圖與 overlay 素材
+│   ├── helmet_detection.py      # 安全帽偵測（實驗性）
+│   └── train.py                 # 安全帽偵測模型訓練腳本
+├── pics/                        # UI 示意圖與 overlay 素材
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 各檔案功能
+## 各模組說明
 
 ### `yolov8/` — 核心監控模組
 
 | 檔案 | 功能 |
 |------|------|
-| `main.py` | 程式入口，啟動 4 條執行緒，主執行緒以 `cv2.imshow` 顯示並處理鍵盤輸入（R 錄影、C 校準、Q/ESC 結束） |
+| `main.py` | 程式入口（cv2 模式），啟動 4 條執行緒，主執行緒以 `cv2.imshow` 顯示（開發 / 測試用） |
 | `config.py` | 所有可調參數的集中定義（攝影機索引、閾值、計時器、grace period、YOLO 解析度等），**修改參數只需動此檔** |
-| `state.py` | 跨執行緒共享狀態：4 條 Queue、`display_state` 字典、Lock、Event，以及攝影機仰角動態補償的 getter/setter |
-| `utils.py` | 純工具函式（無副作用）：EAR 計算、solvePnP 頭姿估計、像素距離、`wrap_angle` 角度正規化、`put_nowait_safe` |
-| `display.py` | 畫面標註渲染：根據 `display_state` 快照在影格上繪製偵測框、關鍵點、資訊面板、警報橫幅、Level 2 速限徽章、Level 3 DANGER 覆蓋 |
-| `thread_capture.py` | 影像擷取執行緒（Producer）：從攝影機讀幀並推送至 `queue_pose`、`queue_face`、`queue_display`，Queue 滿時丟幀 |
-| `thread_yolo.py` | YOLOv8 推論執行緒：通用模型偵測手機（class 67）、pose 模型取手腕關鍵點（idx 9/10）、自訓練模型偵測香菸 |
-| `thread_mediapipe.py` | MediaPipe Tasks API 推論執行緒：計算雙眼 EAR（疲勞）、solvePnP 頭姿（Yaw/Pitch/Roll）、嘴部中心座標、臉寬估計 |
-| `thread_decision.py` | 決策中心：自動攝影機仰角校準（啟動 5s 收集 pitch 中位數）、時序融合（±0.1s）、各危險行為計時器 + grace period、4 級警報判斷、Arduino 指令、CSV 記錄 |
-| `monitor.py` | 舊版單檔實作（含 Arduino 完整邏輯），已被拆分為上述多執行緒架構取代，**不再使用** |
+| `state.py` | 跨執行緒共享狀態：4 條 Queue、`display_state` 字典、Lock、Event |
+| `utils.py` | 純工具函式（無副作用）：EAR 計算、solvePnP 頭姿估計、`wrap_angle`、`put_nowait_safe` |
+| `display.py` | 畫面標註渲染：偵測框、關鍵點、資訊面板、警報橫幅、Level 色塊 |
+| `thread_capture.py` | 影像擷取（Producer）：推送至 `queue_pose`、`queue_face`、`queue_display`，Queue 滿時丟幀 |
+| `thread_yolo.py` | YOLOv8 推論：pose 模型取手腕關鍵點 → 手機 ROI 偵測（yolov8s.pt class 67）；定時香菸偵測（yolov8n_cigarette.pt）|
+| `thread_mediapipe.py` | MediaPipe Tasks API：雙眼 EAR（疲勞）、solvePnP 頭姿（Yaw/Pitch/Roll）、嘴部中心、臉寬估計 |
+| `thread_decision.py` | 決策中心：攝影機仰角自動校準（啟動 5s）、時序融合（±0.1s）、各行為計時器 + grace period、4 級警報、CSV 記錄 |
 
-### `PyQT5/`
-
-| 檔案 | 功能 |
-|------|------|
-| `dashboard.py` | PyQt5 圖形儀表板，取代 `main.py` 的 `cv2.imshow`。直接匯入 `yolov8/` 四執行緒，以 QTimer(33ms) 刷新影像與右側狀態面板（LevelBar、4 個違規指示燈、感測數值列表、校準/校準按鈕） |
-
-### `ResNet/` — 人臉身分驗證（Jetson Nano JetPack 4.6 / Python 3.6 相容）
+### `PyQT5/` — 圖形儀表板（主要執行入口）
 
 | 檔案 | 功能 |
 |------|------|
-| `register_user.py` | 從指定照片提取人臉特徵向量（ArcFace），確認唯一人臉後儲存為 `user_feature.npy` |
-| `verify_user.py` | 開啟 Webcam 擷取單幀，與 `user_feature.npy` 做餘弦相似度比對（門檻 0.4），驗證後立即釋放模型記憶體 |
+| `dashboard.py` | 取代 `main.py` 的 `cv2.imshow`。匯入 `yolov8/` 四執行緒，QTimer(33ms) 刷新影像與右側狀態面板（LevelBar、4 個違規指示卡片、感測數值、校準按鈕） |
 
-### `MediaPipe/`
-
-| 檔案 | 功能 |
-|------|------|
-| `helmet_detection.py` | 安全帽偵測實驗模型（MediaPipe Custom Model） |
-| `train.py` | 安全帽偵測模型訓練腳本 |
-
-### `llava_anlmage_27b_2/`
+### `Helmet/` — 安全帽偵測模組
 
 | 檔案 | 功能 |
 |------|------|
-| `llava_anlmage_27b_2.py` | 使用 LLaVA 27B 多模態大語言模型對行車影像進行語意分析、用來快速辨識是否配戴安全帽，需要連接伺服器 |
+| `preprocess_head.py` | 使用 YOLOv8n-pose 偵測人物，取肩膀關鍵點定位頭部範圍，裁切出頭頸區域（含安全帽），支援 HEIC/HEIF 輸入 |
+| `camera_helmet_detect.py` | 開啟鏡頭，每 8 秒裁切一次頭部後傳送至 Gemma3:27B API 判斷：`Helmet on, strap fastened` / `Helmet on, strap unfastened` / `No helmet`，結果疊加至畫面左上角 |
+
+### `ResNet/` — 人臉身分驗證
+
+| 檔案 | 功能 |
+|------|------|
+| `register_user.py` | 從照片提取 ArcFace 特徵向量，確認唯一人臉後儲存為 `user_feature.npy` |
+| `verify_user.py` | 擷取單幀與 `user_feature.npy` 做餘弦相似度比對（門檻 0.4），驗證駕駛身分 |
+
+### `MediaPipe/` — 安全帽偵測（實驗性）
+
+| 檔案 | 功能 |
+|------|------|
+| `helmet_detection.py` | MediaPipe Custom Model 安全帽偵測（實驗性，非主要流程） |
+| `train.py` | 安全帽偵測模型訓練腳本（需 TensorFlow） |
 
 ---
 
-## 使用模組
+## 使用套件
 
-| 模組 | 用途 |
+| 套件 | 用途 |
 |------|------|
-| `opencv-python` | 影像讀取、繪圖、solvePnP 頭姿估計、影片錄製 |
+| `opencv-contrib-python-headless` | 影像讀取、繪圖、solvePnP 頭姿估計（headless，不含 Qt）|
 | `numpy` | 數值計算（EAR、頭姿矩陣、特徵向量） |
 | `mediapipe` | 人臉 468 點 Landmark（EAR、嘴部、頭姿）、Tasks API |
-| `ultralytics` | YOLOv8 物件偵測與姿態偵測（手機、香菸、手腕） |
-| `tensorflow` | MediaPipe 後端依賴 |
+| `ultralytics` | YOLOv8 物件偵測與姿態偵測（手機、香菸、手腕、頭部裁切） |
 | `PyQt5` | 圖形儀表板（VideoWidget、狀態面板、指示燈） |
-| `uniface` | ArcFace / RetinaFace 人臉特徵提取與偵測（ResNet 模組） |
-| `deepface` / `retinaface` | 人臉辨識備用依賴 |
-| `requests` | HTTP 通訊（遠端上報預留） |
-| `matplotlib` | 感測數值視覺化分析 |
+| `pillow-heif` | Helmet 模組 HEIC/HEIF 圖片讀取支援 |
+| `uniface` | ArcFace / RetinaFace 人臉特徵提取（ResNet 模組） |
+| `requests` | Helmet 模組呼叫 Gemma3:27B API |
+| `huggingface-hub` | 香菸模型自動下載（basant18/Smoking-detection-YOLO26s） |
 | `pyserial` | Arduino 序列埠通訊（可選，警報硬體輸出） |
 
 ---
 
 ## 快速開始
 
-### 環境安裝
+### 環境安裝（Jetson Nano / linux-aarch64）
 
 ```bash
+# PyQt5 需透過 conda 安裝
+conda install "pyqt=5.15.11" -n goshare
+
+# 其他套件
 pip install -r requirements.txt
 ```
 
-### 啟動（cv2 模式）
+### 啟動 PyQt5 儀表板（主要入口）
+
+```bash
+cd PyQT5
+QT_QPA_PLATFORM_PLUGIN_PATH=~/miniconda3/envs/goshare/plugins python dashboard.py
+```
+
+或將環境變數寫入 `~/.bashrc` 後直接執行：
+
+```bash
+echo 'export QT_QPA_PLATFORM_PLUGIN_PATH=~/miniconda3/envs/goshare/plugins' >> ~/.bashrc
+source ~/.bashrc
+
+cd PyQT5
+python dashboard.py
+```
+
+### 啟動 cv2 模式（開發 / 測試）
 
 ```bash
 cd yolov8
 python main.py
 ```
 
-### 啟動（PyQt5 儀表板）
+### 啟動安全帽偵測
 
 ```bash
-cd PyQT5
-python dashboard.py
+cd Helmet
+python camera_helmet_detect.py
 ```
 
-### 鍵盤操作
+### 鍵盤操作（dashboard / main.py）
 
 | 按鍵 | 動作 |
 |------|------|
-| `R` | 開始 / 停止錄影（儲存至 `yolov8/output/`） |
 | `C` | 重新校準攝影機仰角補償 |
 | `Q` / `ESC` | 結束程式 |
 
@@ -163,14 +188,13 @@ python dashboard.py
 
 ## 系統需求
 
-- Python 3.10+（ResNet 模組支援 3.6+）
-- CUDA GPU 建議（CPU 亦可運行，FPS 較低）
-- 部署目標：NVIDIA Jetson Nano（JetPack 4.6）
+- Python 3.12（conda 環境 `goshare`）
+- 部署目標：NVIDIA Jetson Nano（linux-aarch64）
 - 攝影機：USB Webcam 或 CSI Camera（index 0）
+- Helmet 模組：需連線至 Gemma3:27B API 伺服器
 
 ---
 
 ## 輸出
 
 - **CSV**：每個決策週期一行，記錄 raw_pitch、corr_pitch、yaw、roll、EAR、各偵測旗標、alert_level，自動儲存於 `yolov8/output/monitor_YYYYMMDD_HHMMSS.csv`
-- **影片**：R 鍵觸發，mp4 格式儲存於同目錄

@@ -1,8 +1,8 @@
 # ============================================================
 # Conda environment: goshare
 # Python version:   3.12.12
-# Platform:         win-64
-# Last updated:     2026-05-05
+# Platform:         linux-aarch64 (Jetson Nano)
+# Last updated:     2026-05-26
 # ============================================================
 
 # Core vision & detection
@@ -49,6 +49,9 @@ matplotlib==3.10.8
 psutil==7.2.2
 sounddevice==0.5.5
 rich==14.3.3
+
+# Helmet detection (Helmet/)
+pillow-heif==1.3.0
 
 # Serial communication (optional, used in yolov8/monitor.py)
 # pyserial     # not installed in current env

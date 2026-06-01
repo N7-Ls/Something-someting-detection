@@ -38,7 +38,25 @@
       "Bash(mv yolov8/monitor.py _trash/yolov8/)",
       "Bash(mv yolov8/suggestions.md _trash/yolov8/)",
       "Bash(mv yolov8/rules _trash/yolov8/)",
-      "Bash(mkdir -p \"c:/Users/User/Documents/AI_Product/Something-someting-detection/web/templates\" && echo \"done\")"
+      "Bash(mkdir -p \"c:/Users/User/Documents/AI_Product/Something-someting-detection/web/templates\" && echo \"done\")",
+      "Bash(conda env *)",
+      "Read(//etc/**)",
+      "Bash(dpkg -l)",
+      "Bash(python3 -c \"import torch; print\\(torch.__version__\\)\")",
+      "Bash(find /usr/local/lib /usr/lib -name \"torch\" -type d 2>/dev/null | head -5 *)",
+      "Read(//usr/local/lib/**)",
+      "Read(//home/user/**)",
+      "Bash(wait)",
+      "Bash(conda activate *)",
+      "Bash(pip list *)",
+      "Bash(python yolov8/main.py)",
+      "Bash(git lfs *)",
+      "Bash(sudo apt-get install -y git-lfs)",
+      "Bash(pip install *)",
+      "Bash(wget -q --show-progress -O yolov8n-pose.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n-pose.pt\")",
+      "Bash(wget -q --show-progress -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")",
+      "Bash(conda install *)",
+      "Bash(wget -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\Documents\\AI_Product\\Something-someting-detection\\web"
