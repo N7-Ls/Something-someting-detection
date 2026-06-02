@@ -6,7 +6,8 @@
       "Bash(python -c \"from PyQt5 import QtWidgets; print\\('PyQt5 OK'\\)\" && rm /home/user/miniconda3/envs/goshare/lib/python3.12/site-packages/system-pyqt5.pth 2>/dev/null; echo \"done\")",
       "Bash(timeout 30 python dashboard.py)",
       "Bash(python -c ' *)",
-      "Bash(QT_QPA_PLATFORM_PLUGIN_PATH=/home/user/miniconda3/envs/goshare/plugins timeout 30 python dashboard.py)"
+      "Bash(QT_QPA_PLATFORM_PLUGIN_PATH=/home/user/miniconda3/envs/goshare/plugins timeout 30 python dashboard.py)",
+      "Bash(xxd /home/user/Goshare-bs/Goshare/yolov8n-pose.pt)"
     ],
     "additionalDirectories": [
       "/home/user/miniconda3/envs/goshare/lib/python3.12/site-packages"
