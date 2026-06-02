@@ -156,6 +156,7 @@ def main():
         if not ret:
             print("[ERROR] 讀取鏡頭失敗")
             break
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
 
         now = time.perf_counter()
         if not analyzing and (now - last_check) >= CHECK_INTERVAL:

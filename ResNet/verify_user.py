@@ -38,6 +38,7 @@ def capture_frame(camera_index=0):
     cap.release()
     if not ret or frame is None:
         raise IOError("無法從攝影機讀取畫面。")
+    frame = cv2.rotate(frame, cv2.ROTATE_180)
     return frame
 
 
