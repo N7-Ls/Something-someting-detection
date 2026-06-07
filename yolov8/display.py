@@ -103,10 +103,11 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
         return out
 
     # ── 左側資訊面板（cv2 獨立模式，PyQt5 模式已由 StatusPanel 顯示）──
-    ear_v    = state["ear_val"]
-    yaw_v    = state["yaw"]
-    roll_v   = state["roll"]
-    pitchc_v = state.get("pitch_corr")
+    ear_v     = state["ear_val"]
+    yaw_v     = state["yaw"]
+    roll_v    = state["roll"]
+    pitchc_v  = state.get("pitch_corr")
+    perclos_v = state.get("perclos", 0.0)
 
     def ear_color(v):
         if v is None: return (180, 180, 180)
@@ -139,7 +140,7 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
 
     panel = [
         (face_txt,                                                              face_clr),
-        (f"EAR  : {ear_v:.3f}"  if ear_v   is not None else "EAR  : --",     ear_color(ear_v)),
+        (f"EAR  : {ear_v:.3f}  P:{perclos_v:.0%}" if ear_v is not None else "EAR  : --", ear_color(ear_v)),
         (f"Yaw  : {yaw_v:+.1f}" if yaw_v   is not None else "Yaw  : --",     yaw_color(yaw_v)),
         (pitchc_txt,                                                            pitchc_color(pitchc_v)),
         (f"Roll : {roll_v:+.1f}"if roll_v  is not None else "Roll : --",     (180, 180, 180)),
@@ -187,31 +188,26 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
         cv2.addWeighted(overlay2, 0.65, out, 0.35, 0, out)
         out = _put_chinese_text(out, state["alert_msg"], (12, h - 38), 24, (255, 255, 255))
 
-    # ── Level 2：右上角速限徽章（30 km/h）──
+    # ── Level 2：右上角警示三角 ──
     if level == 2:
         cx, cy, r = w - 72, 72, 58
-        cv2.circle(out, (cx, cy), r, (0, 0, 200), -1)
-        cv2.circle(out, (cx, cy), r, (255, 255, 255), 3)
-        cv2.putText(out, "30",    (cx - 26, cy + 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
-        cv2.putText(out, "km/h", (cx - 28, cy + 34),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 1)
+        pts = np.array([
+            [cx,      cy - r + 8],
+            [cx - r + 8, cy + r - 8],
+            [cx + r - 8, cy + r - 8],
+        ], np.int32)
+        cv2.fillPoly(out, [pts], (0, 100, 220))
+        cv2.polylines(out, [pts], True, (255, 255, 255), 3)
+        cv2.putText(out, "!",  (cx - 10, cy + r - 16),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 4)
 
-    # ── Level 3：全螢幕 DANGER 覆蓋 + 時速歸零 ──
+    # ── Level 3：全螢幕疲勞警示覆蓋 ──
     if level == 3:
         danger_overlay = out.copy()
         cv2.rectangle(danger_overlay, (0, 0), (w, h), (0, 0, 160), -1)
         cv2.addWeighted(danger_overlay, 0.40, out, 0.60, 0, out)
-        txt_d = "DANGER"
-        (tw, _), _ = cv2.getTextSize(txt_d, cv2.FONT_HERSHEY_SIMPLEX, 2.8, 7)
-        tx, ty = (w - tw) // 2, h // 2 - 10
-        cv2.putText(out, txt_d, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 2.8, (0, 0, 0), 10)
-        cv2.putText(out, txt_d, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 2.8, (0, 0, 255), 7)
-        txt_s = "0  km/h"
-        (sw, _), _ = cv2.getTextSize(txt_s, cv2.FONT_HERSHEY_SIMPLEX, 1.6, 4)
-        cv2.putText(out, txt_s, ((w - sw) // 2, ty + 70),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 0, 0), 6)
-        cv2.putText(out, txt_s, ((w - sw) // 2, ty + 70),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 3)
+        ty = h // 2 - 20
+        out = _put_chinese_text(out, "疲勞警示", (w // 2 - 80, ty - 10), 48, (255, 255, 255))
+        out = _put_chinese_text(out, "建議立即停車休息", (w // 2 - 120, ty + 55), 28, (255, 220, 220))
 
     return out

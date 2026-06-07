@@ -109,12 +109,12 @@ def thread_yolo():
                 kps_xy   = res_pose.keypoints[0].xy.cpu().numpy()
                 kps_conf = res_pose.keypoints[0].conf.cpu().numpy()
                 for idx in [9, 10]:          # 手腕
-                    if idx < len(kps_xy) and kps_conf[idx] > 0.08:
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.10:
                         x, y = kps_xy[idx]
                         if x > 0 and y > 0:
                             wrists.append((float(x), float(y)))
                 for idx in [7, 8]:           # 手肘
-                    if idx < len(kps_xy) and kps_conf[idx] > 0.10:
+                    if idx < len(kps_xy) and kps_conf[idx] > 0.13:
                         x, y = kps_xy[idx]
                         if x > 0 and y > 0:
                             elbows.append((float(x), float(y)))
