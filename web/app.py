@@ -94,7 +94,6 @@ def _camera_worker():
     while not _cam_stop.is_set():
         ret, frame = cap.read()
         if ret:
-            frame = cv2.rotate(frame, cv2.ROTATE_180)
             with _frame_lock:
                 _current_frame = frame.copy()
         time.sleep(0.05)
