@@ -51,6 +51,7 @@ display_state = {
     "face_width":       None,
     "wrist_mouth_dist": None,
     "pitch_corr":       None,
+    "perclos":          0.0,
     # 決策
     "alert_level":  0,
     "alert_msg":    "",

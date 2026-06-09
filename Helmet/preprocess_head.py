@@ -7,12 +7,13 @@ from ultralytics import YOLO
 
 pillow_heif.register_heif_opener()
 
+_MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "yolov8n-pose.pt")
 _model = None
 
 def _get_model():
     global _model
     if _model is None:
-        _model = YOLO("yolov8n-pose.pt")
+        _model = YOLO(_MODEL_PATH)
     return _model
 
 # COCO keypoint 索引

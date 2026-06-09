@@ -87,16 +87,17 @@ def _camera_worker():
         logging.error("無法開啟攝影機")
         _cam_released.set()
         return
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
     logging.info("攝影機已啟動")
 
     while not _cam_stop.is_set():
         ret, frame = cap.read()
         if ret:
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
             with _frame_lock:
                 _current_frame = frame.copy()
-        time.sleep(0.033)
+        time.sleep(0.05)
 
     cap.release()
     _cam_released.set()
@@ -234,7 +235,7 @@ def _mjpeg_generator():
                 continue
             annotated = frame
 
-        ok, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        ok, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 50])
         if not ok:
             continue
         yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" +

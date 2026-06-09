@@ -207,7 +207,7 @@ def main():
         if not ret:
             break
 
-        frame = cv2.flip(frame, 1)
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
         h, w  = frame.shape[:2]
         rgb   = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = face_mesh.process(rgb)

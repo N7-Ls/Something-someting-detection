@@ -25,7 +25,6 @@ def thread_capture():
                 logging.warning("讀取影格失敗，跳過")
                 time.sleep(0.01)
                 continue
-
             ts     = time.perf_counter()
             packet = (frame_id, ts, frame)
             put_nowait_safe(queue_pose,    packet)

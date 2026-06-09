@@ -8,6 +8,7 @@ import logging
 import os
 import queue
 import time
+from collections import deque
 import numpy as np
 import state
 from config import (
@@ -17,6 +18,7 @@ from config import (
     DURATION_DISTRACT, DURATION_SMOKE, DURATION_SMOKE_NOCIG,
     DURATION_PHONE, DURATION_FATIGUE,
     HOLD_DISTRACT, HOLD_SMOKE, HOLD_PHONE, HOLD_FATIGUE,
+    PERCLOS_WINDOW_SEC, PERCLOS_THRESHOLD,
 )
 from state import (
     queue_decision, stop_event, recalib_event,
@@ -31,6 +33,7 @@ def thread_decision():
     cache_face  = {}
     timers      = {"distract": None, "smoke": None, "phone": None, "fatigue": None}
     hold_timers = {"distract": None, "smoke": None, "phone": None, "fatigue": None}
+    ear_history: deque = deque()   # (perf_counter timestamp, ear_value)
     HOLD_MAP    = {
         "distract": HOLD_DISTRACT,
         "smoke":    HOLD_SMOKE,
@@ -176,10 +179,20 @@ def thread_decision():
                         break
             phone_cond = phone_by_bbox or phone_by_gaze or phone_by_wrist
 
-            fatigue_cond = (
-                face is not None and face["ear_val"] is not None
-                and face["ear_val"] < EAR_THRESHOLD
-            )
+            # ── PERCLOS 疲勞偵測（滾動窗口）──
+            _now_pc = time.perf_counter()
+            if face is not None and face["ear_val"] is not None:
+                ear_history.append((_now_pc, face["ear_val"]))
+            while ear_history and (_now_pc - ear_history[0][0]) > PERCLOS_WINDOW_SEC:
+                ear_history.popleft()
+            if len(ear_history) >= 10:
+                _closed = sum(1 for _, e in ear_history if e < EAR_THRESHOLD)
+                _perclos = _closed / len(ear_history)
+            else:
+                _perclos = 0.0
+            fatigue_cond = _perclos >= PERCLOS_THRESHOLD
+            with display_lock:
+                display_state["perclos"] = _perclos
 
             smoke_cond          = False
             wrist_mouth_dist_min = None
@@ -223,19 +236,19 @@ def thread_decision():
             trig_distract = check_duration("distract", distract_cond, DURATION_DISTRACT)
 
             if trig_fatigue:
-                level, msg = 3, "[介入] Level 3: 疲勞駕駛，緊急喚醒，時速歸零"
+                level, msg = 3, "[警示] Level 3: 偵測到疲勞駕駛，請立即靠邊停車休息"
             elif trig_smoke:
-                level, msg = 2, "[介入] Level 2: 抽菸違規，鎖定時速 30km/h"
+                level, msg = 2, "[警示] Level 2: 偵測到抽菸行為，請專注駕駛"
             elif trig_phone:
                 level = 2
                 if phone_by_bbox:
-                    msg = "[介入] Level 2: 滑手機（畫面偵測），鎖定時速 30km/h"
+                    msg = "[警示] Level 2: 偵測到使用手機，請放下手機專注駕駛"
                 elif phone_by_wrist:
-                    msg = "[介入] Level 2: 手腕舉至臉部（疑似持機），鎖定時速 30km/h"
+                    msg = "[警示] Level 2: 疑似使用手機，請放下手機專注駕駛"
                 else:
-                    msg = "[介入] Level 2: 疑似低頭滑手機，鎖定時速 30km/h"
+                    msg = "[警示] Level 2: 疑似低頭分心，請注意前方路況"
             elif trig_distract:
-                level, msg = 1, "[介入] Level 1: 視線分心，發出提示音與黃燈"
+                level, msg = 1, "[警示] Level 1: 視線偏離，請注意前方路況"
             else:
                 level, msg = 0, ""
 
