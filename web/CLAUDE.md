@@ -33,6 +33,15 @@ Phase 1/2 用 Flask 自己的 `_camera_worker`（寫入 `_current_frame`）。
   四條 thread 函式（`thread_capture`/`thread_yolo`/`thread_mediapipe`/`thread_decision`），
   不重寫推論邏輯。
 
+## 警報音效
+
+`templates/index.html` 用 Web Audio API 在**瀏覽該頁面的裝置**上播放提示音
+（不依賴 Jetson 的音訊輸出，因為 Orin Nano 預設只有 HDMI 音源）。
+依 `/api/state` 的 `alert_level` 變化在前端播放：等級越高頻率越高、
+重複提醒間隔越短（`BEEP_INTERVAL`/`BEEP_PATTERN`）。
+`AudioContext` 需在使用者手勢中建立/resume，故在 `post()`（按鈕點擊）時呼叫
+`_ensureAudio()` 解鎖，避免進入 driving 階段後無法自動發聲。
+
 ## MJPEG 串流 (`/video_feed`)
 
 - Phase 1/2：直接吐 `_current_frame`

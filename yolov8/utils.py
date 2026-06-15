@@ -34,7 +34,17 @@ def head_pose(landmarks, w: int, h: int):
     rmat, _ = cv2.Rodrigues(rvec)
     # cv2.RQDecomp3x3 直接回傳度，不需 × 360
     angles, _, _, _, _, _ = cv2.RQDecomp3x3(rmat)
-    return angles[1], angles[0], angles[2]   # yaw, pitch, roll
+    pitch, yaw, roll = angles[0], angles[1], angles[2]
+
+    # 尤拉角分解歧義：(pitch, yaw, roll) 與 (pitch+180, 180-yaw, roll+180)
+    # 代表同一個旋轉矩陣，RQDecomp3x3 會在兩者間跳動造成 corr_pitch 假性大幅跳變。
+    # 取 |roll|<=90 的分支為正規表示，roll 接近 0 代表頭部沒有明顯側傾，較符合常態。
+    if abs(roll) > 90.0:
+        pitch = wrap_angle(pitch + 180.0)
+        yaw   = wrap_angle(180.0 - yaw)
+        roll  = wrap_angle(roll + 180.0)
+
+    return yaw, pitch, roll
 
 
 def pixel_dist(p1, p2) -> float:

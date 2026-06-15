@@ -14,6 +14,7 @@ QUEUE_MAXSIZE = 4
 QUEUE_MAXSIZE_LATEST = 1   # queue_pose 專用：thread_yolo 處理速度跟不上來源，永遠保留最新影格，避免延遲累積
 
 # ── 校準 ──
+CALIB_DELAY_SEC  = 3.0   # 進入行駛階段後，先等待此秒數讓使用者回到正常騎乘姿勢，才開始收樣校準
 CALIB_SECONDS    = 5.0
 PITCH_CAM_OFFSET = 25.0   # 初始估計值，校準後動態更新
 
@@ -26,7 +27,7 @@ CIG_MOUTH_RATIO   = 1.2    # cig BBox 中心距嘴部距離 ≤ 臉寬 × 此倍
 CIG_INTERVAL_SEC  = 0.3    # 香菸模型最短推論間隔（秒）
 WRIST_MOUTH_RATIO = 0.55
 YAW_PITCH_LIMIT   = 30.0  # 視線分心角度門檻（原45°太接近臉部追蹤丟失的臨界角，導致轉頭時偵測不到）
-PITCH_PHONE_LIMIT = 20.0
+PITCH_PHONE_LIMIT = 8.0
 EAR_THRESHOLD     = 0.27   # 校準失敗時的 fallback 預設值
 EAR_THRESHOLD_RATIO = 0.80 # 動態閾值 = 校準期間量到的睜眼基準 EAR 中位數 × 此比例
 EAR_THRESHOLD_MIN   = 0.12 # 動態閾值下限，避免基準值異常過低

@@ -12,7 +12,7 @@ from collections import deque
 import numpy as np
 import state
 from config import (
-    OUTPUT_DIR, RECORD_CSV, CALIB_SECONDS,
+    OUTPUT_DIR, RECORD_CSV, CALIB_SECONDS, CALIB_DELAY_SEC,
     YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT,
     EAR_THRESHOLD_RATIO, EAR_THRESHOLD_MIN, EAR_THRESHOLD_MAX,
     FUSE_TIME_WINDOW, WRIST_MOUTH_RATIO, CIG_MOUTH_RATIO,
@@ -67,10 +67,11 @@ def thread_decision():
             return (now - timers[key]) >= required_sec
 
     # ── 自動校準 ──
-    calib_pitches = []
-    calib_ears    = []
-    calib_start   = time.perf_counter()
-    calibrated    = False
+    calib_pitches    = []
+    calib_ears       = []
+    calib_start      = time.perf_counter()
+    calib_data_start = calib_start + CALIB_DELAY_SEC   # 延遲後才開始收樣，給使用者時間回到正常騎乘姿勢
+    calibrated       = False
 
     def _finish_calibration():
         if len(calib_pitches) >= 10:
@@ -126,8 +127,9 @@ def thread_decision():
                 recalib_event.clear()
                 calib_pitches.clear()
                 calib_ears.clear()
-                calib_start = time.perf_counter()
-                calibrated  = False
+                calib_start      = time.perf_counter()
+                calib_data_start = calib_start + CALIB_DELAY_SEC
+                calibrated       = False
                 with display_lock:
                     display_state["calib_status"] = f"重新校準中… {CALIB_SECONDS:.0f}s"
                 logging.info("重新校準開始")
@@ -135,7 +137,7 @@ def thread_decision():
             try:
                 result = queue_decision.get(timeout=1.0)
             except queue.Empty:
-                if not calibrated and (time.perf_counter() - calib_start) >= CALIB_SECONDS:
+                if not calibrated and (time.perf_counter() - calib_data_start) >= CALIB_SECONDS:
                     _finish_calibration()
                     calibrated = True
                 continue
@@ -164,17 +166,24 @@ def thread_decision():
             # ── 校準期間收集 raw pitch / EAR ──
             raw_pitch = face["pitch"] if (face and face["pitch"] is not None) else None
             if not calibrated:
-                remaining = CALIB_SECONDS - (time.perf_counter() - calib_start)
-                if raw_pitch is not None:
-                    calib_pitches.append(raw_pitch)
-                if face is not None and face["ear_val"] is not None:
-                    calib_ears.append(face["ear_val"])
-                if remaining <= 0:
-                    _finish_calibration()
-                    calibrated = True
-                else:
+                now_calib = time.perf_counter()
+                if now_calib < calib_data_start:
+                    # 延遲期：尚未開始收樣，讓使用者先回到正常騎乘姿勢
+                    delay_remaining = calib_data_start - now_calib
                     with display_lock:
-                        display_state["calib_status"] = f"校準中… {remaining:.0f}s（保持正常姿勢）"
+                        display_state["calib_status"] = f"準備校準… {delay_remaining:.0f}s（請回到正常騎乘姿勢）"
+                else:
+                    remaining = CALIB_SECONDS - (now_calib - calib_data_start)
+                    if raw_pitch is not None:
+                        calib_pitches.append(raw_pitch)
+                    if face is not None and face["ear_val"] is not None:
+                        calib_ears.append(face["ear_val"])
+                    if remaining <= 0:
+                        _finish_calibration()
+                        calibrated = True
+                    else:
+                        with display_lock:
+                            display_state["calib_status"] = f"校準中… {remaining:.0f}s（保持正常姿勢）"
 
             # ── corr_pitch（關鍵公式，勿更動符號與 wrap）──
             # 正值=低頭/手機，負值=抬頭/分心

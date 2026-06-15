@@ -318,6 +318,46 @@ let _phase     = "face_verify";
 let _analyzing = false;
 let _lastBtnKey = "";
 
+// ── 警報音效（Web Audio API，由觀看此頁面的裝置播放）────────────────────────────
+let _audioCtx       = null;
+let _lastAlertLevel = 0;
+let _lastBeepTime   = 0;
+const BEEP_INTERVAL = { 1: 5000, 2: 3000, 3: 1500 };   // 各等級重複提醒間隔（ms）
+const BEEP_PATTERN  = {                                 // [頻率Hz, 長度ms]
+    1: [[600, 150]],
+    2: [[850, 120], [850, 120]],
+    3: [[1100, 100], [1100, 100], [1100, 100]],
+};
+
+function _ensureAudio() {
+    if (!_audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        _audioCtx = new AC();
+    }
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    return _audioCtx;
+}
+
+function playAlertSound(level) {
+    const ctx = _ensureAudio();
+    const seq = BEEP_PATTERN[level];
+    if (!ctx || !seq) return;
+    let t = ctx.currentTime;
+    for (const [freq, dur] of seq) {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = freq;
+        gain.gain.value = 0.3;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur / 1000);
+        t += dur / 1000 + 0.08;
+    }
+}
+
 async function pollState() {
     try {
         const data = await (await fetch("/api/state")).json();
@@ -357,8 +397,19 @@ function applyState(s) {
         const lvl = s.alert_level || 0;
         chip.className = "alert-chip level-" + lvl;
         chip.textContent = ["正常行駛", "注意：分心駕駛", "警告：危險行為", "緊急：立即停車"][lvl] || "正常行駛";
+
+        if (lvl > 0) {
+            const now      = Date.now();
+            const interval = BEEP_INTERVAL[lvl] || 3000;
+            if (lvl !== _lastAlertLevel || now - _lastBeepTime >= interval) {
+                playAlertSound(lvl);
+                _lastBeepTime = now;
+            }
+        }
+        _lastAlertLevel = lvl;
     } else {
         overlay.classList.remove("visible");
+        _lastAlertLevel = 0;
     }
 }
 
@@ -395,6 +446,7 @@ function addBtn(container, cls, label, handler, disabled) {
 
 // ── API 呼叫 ────────────────────────────────────────────────────────────────
 async function post(url) {
+    _ensureAudio();   // 在使用者手勢中解鎖音效播放權限，避免行駛中無法自動發聲
     try { await fetch(url, { method: "POST" }); } catch (_) {}
     pollState();
 }

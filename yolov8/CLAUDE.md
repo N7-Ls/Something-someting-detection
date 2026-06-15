@@ -54,12 +54,19 @@ thread_yolo 每幀：
 
 手機觸發條件（任一，邏輯在 `thread_decision.py`）：
 - `phone_by_bbox`：ROI 內偵測到手機 bbox（conf ≥ `YOLO_PHONE_CONF`=0.30）
-- `phone_by_gaze`：`corr_pitch > PITCH_PHONE_LIMIT`（20°，低頭看手機）
+- `phone_by_gaze`：`corr_pitch > PITCH_PHONE_LIMIT`（8°，低頭看手機）
 - `phone_by_wrist`：手腕 y < 嘴部 y + 臉寬×2.0（手舉到臉旁的持機範圍）
 
 ## 關鍵設計
 
+- `utils.head_pose()`：`cv2.RQDecomp3x3` 對同一旋轉矩陣有兩種等價解
+  `(pitch, yaw, roll)` 與 `(pitch+180, 180-yaw, roll+180)`，會在兩者間跳動造成
+  `corr_pitch` 假性跳變 ±100°以上。已修正為固定取 `|roll|<=90°` 的分支。
 - `corr_pitch = -wrap_angle(raw_pitch - cam_offset)`：正值=低頭，負號因 solvePnP 方向與預期相反
+- 自動校準分兩段：進入行駛階段後先延遲 `CALIB_DELAY_SEC`(3s) 不收樣，
+  讓使用者回到正常騎乘姿勢，再花 `CALIB_SECONDS`(5s) 收集 `cam_offset`/EAR 基準。
+  避免剛點「開始行駛」時頭部姿勢（如低頭看手機按按鈕）被當成校準基準，
+  導致 `corr_pitch` 整段偏移、低頭判定範圍被吃掉
 - **疲勞偵測用 PERCLOS**（非單純 EAR 持續時間）：3 秒滾動窗口
   (`PERCLOS_WINDOW_SEC`) 內 `ear < EAR_THRESHOLD`(0.27) 的幀數比例
   ≥ `PERCLOS_THRESHOLD`(0.50) 即觸發；`DURATION_FATIGUE=0`（PERCLOS 已含時序過濾）
