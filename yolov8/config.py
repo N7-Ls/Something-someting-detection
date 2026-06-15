@@ -11,6 +11,7 @@ OUTPUT_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 # ── Queue ──
 QUEUE_MAXSIZE = 4
+QUEUE_MAXSIZE_LATEST = 1   # queue_pose 專用：thread_yolo 處理速度跟不上來源，永遠保留最新影格，避免延遲累積
 
 # ── 校準 ──
 CALIB_SECONDS    = 5.0
@@ -24,7 +25,7 @@ YOLO_CIG_IMGSZ    = 320    # 香菸模型推論解析度（降低以減少延遲
 CIG_MOUTH_RATIO   = 1.2    # cig BBox 中心距嘴部距離 ≤ 臉寬 × 此倍數才計入
 CIG_INTERVAL_SEC  = 0.3    # 香菸模型最短推論間隔（秒）
 WRIST_MOUTH_RATIO = 0.55
-YAW_PITCH_LIMIT   = 45.0
+YAW_PITCH_LIMIT   = 30.0  # 視線分心角度門檻（原45°太接近臉部追蹤丟失的臨界角，導致轉頭時偵測不到）
 PITCH_PHONE_LIMIT = 20.0
 EAR_THRESHOLD     = 0.27   # 校準失敗時的 fallback 預設值
 EAR_THRESHOLD_RATIO = 0.80 # 動態閾值 = 校準期間量到的睜眼基準 EAR 中位數 × 此比例

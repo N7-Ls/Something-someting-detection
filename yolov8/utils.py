@@ -51,3 +51,16 @@ def put_nowait_safe(q: queue.Queue, item):
         q.put_nowait(item)
     except queue.Full:
         pass
+
+
+def put_latest_safe(q: queue.Queue, item):
+    """佇列滿時丟棄舊項目、放入最新項目，避免消費者處理過時的積壓影格。"""
+    while True:
+        try:
+            q.put_nowait(item)
+            return
+        except queue.Full:
+            try:
+                q.get_nowait()
+            except queue.Empty:
+                pass

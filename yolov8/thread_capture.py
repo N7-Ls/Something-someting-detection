@@ -7,7 +7,7 @@ import logging
 import time
 from config import CAMERA_INDEX
 from state  import queue_pose, queue_face, queue_cig, queue_display, stop_event
-from utils  import put_nowait_safe
+from utils  import put_nowait_safe, put_latest_safe
 
 
 def thread_capture():
@@ -28,7 +28,7 @@ def thread_capture():
             frame  = cv2.rotate(frame, cv2.ROTATE_180)
             ts     = time.perf_counter()
             packet = (frame_id, ts, frame)
-            put_nowait_safe(queue_pose,    packet)
+            put_latest_safe(queue_pose,    packet)
             put_nowait_safe(queue_face,    packet)
             put_nowait_safe(queue_cig,     packet)
             put_nowait_safe(queue_display, (frame_id, frame))
@@ -39,7 +39,7 @@ def thread_capture():
     finally:
         cap.release()
         for _ in range(2):
-            put_nowait_safe(queue_pose, None)
+            put_latest_safe(queue_pose, None)
             put_nowait_safe(queue_face, None)
             put_nowait_safe(queue_cig,  None)
         put_nowait_safe(queue_display, None)

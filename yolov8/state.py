@@ -4,10 +4,10 @@
 """
 import queue
 import threading
-from config import PITCH_CAM_OFFSET, EAR_THRESHOLD, QUEUE_MAXSIZE, CALIB_SECONDS
+from config import PITCH_CAM_OFFSET, EAR_THRESHOLD, QUEUE_MAXSIZE, QUEUE_MAXSIZE_LATEST, CALIB_SECONDS
 
 # ── Queue ──
-queue_pose     = queue.Queue(maxsize=QUEUE_MAXSIZE)
+queue_pose     = queue.Queue(maxsize=QUEUE_MAXSIZE_LATEST)
 queue_face     = queue.Queue(maxsize=QUEUE_MAXSIZE)
 queue_cig      = queue.Queue(maxsize=QUEUE_MAXSIZE)
 queue_decision = queue.Queue(maxsize=QUEUE_MAXSIZE * 2)
