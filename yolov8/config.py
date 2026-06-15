@@ -38,13 +38,6 @@ FUSE_TIME_WINDOW  = 0.1
 PERCLOS_WINDOW_SEC = 3.0   # 滾動窗口長度（秒）
 PERCLOS_THRESHOLD  = 0.50  # 窗口內超過此比例的幀數 EAR < EAR_THRESHOLD 即判定疲勞
 
-# ── 低頭頻率/時長偵測（輔助手機辨識）──
-HEAD_DOWN_WINDOW_SEC     = 60.0  # 滾動統計窗口（秒）
-HEAD_DOWN_MIN_EPISODE    = 0.5   # 低於此秒數的低頭事件視為雜訊，不計入統計
-HEAD_DOWN_FREQ_LIMIT     = 4     # 窗口內低頭次數達此值即觸發
-HEAD_DOWN_DURATION_LIMIT = 3.5   # 單次連續低頭超過此秒數即觸發
-HEAD_DOWN_TOTAL_LIMIT    = 10.0  # 窗口內累積低頭時長超過此秒數即觸發
-
 # ── 計時器（秒）──
 DURATION_DISTRACT    = 2.0
 DURATION_SMOKE       = 2.0

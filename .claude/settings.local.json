@@ -60,7 +60,8 @@
       "Bash(python3 -c \"import config, state, display, thread_decision; print\\('ok'\\)\")",
       "Bash(python3 -c \"import config, thread_yolo\")",
       "Bash(python3 -c ' *)",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('yolov8/display.py'\\).read\\(\\)\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('yolov8/display.py'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('yolov8/thread_decision.py'\\).read\\(\\)\\); ast.parse\\(open\\('yolov8/config.py'\\).read\\(\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\Documents\\AI_Product\\Something-someting-detection\\web"

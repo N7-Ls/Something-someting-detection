@@ -20,8 +20,6 @@ from config import (
     DURATION_PHONE, DURATION_FATIGUE,
     HOLD_DISTRACT, HOLD_SMOKE, HOLD_PHONE, HOLD_FATIGUE,
     PERCLOS_WINDOW_SEC, PERCLOS_THRESHOLD,
-    HEAD_DOWN_WINDOW_SEC, HEAD_DOWN_MIN_EPISODE,
-    HEAD_DOWN_FREQ_LIMIT, HEAD_DOWN_DURATION_LIMIT, HEAD_DOWN_TOTAL_LIMIT,
 )
 from state import (
     queue_decision, stop_event, recalib_event,
@@ -37,9 +35,7 @@ def thread_decision():
     cache_face  = {}
     timers      = {"distract": None, "smoke": None, "phone": None, "fatigue": None}
     hold_timers = {"distract": None, "smoke": None, "phone": None, "fatigue": None}
-    ear_history: deque = deque()        # (perf_counter timestamp, ear_value)
-    head_down_events: deque = deque()   # (start, end) 每次低頭事件
-    head_down_start = None              # 當前低頭事件的開始時間（None 表示目前未低頭）
+    ear_history: deque = deque()   # (perf_counter timestamp, ear_value)
     HOLD_MAP    = {
         "distract": HOLD_DISTRACT,
         "smoke":    HOLD_SMOKE,
@@ -113,8 +109,7 @@ def thread_decision():
         "timestamp",
         "raw_pitch", "corr_pitch", "yaw", "roll", "ear",
         "cam_offset",
-        "phone_bbox", "phone_gaze", "phone_wrist", "phone_gaze_pattern",
-        "hd_count", "hd_total_sec", "hd_current_sec",
+        "phone_bbox", "phone_gaze", "phone_wrist",
         "smoke", "fatigue", "distract",
         "alert_level", "alert_msg",
     ])
@@ -201,29 +196,6 @@ def thread_decision():
             )
             phone_by_bbox  = yolo is not None and yolo["phone_detected"]
             phone_by_gaze  = corr_pitch is not None and corr_pitch > PITCH_PHONE_LIMIT
-
-            # ── 低頭頻率/時長追蹤（輔助辨識）────────────────────────────────
-            _now_hd = time.perf_counter()
-            if phone_by_gaze:
-                if head_down_start is None:
-                    head_down_start = _now_hd
-            else:
-                if head_down_start is not None:
-                    _ep_dur = _now_hd - head_down_start
-                    if _ep_dur >= HEAD_DOWN_MIN_EPISODE:
-                        head_down_events.append((head_down_start, _now_hd))
-                    head_down_start = None
-            while head_down_events and (_now_hd - head_down_events[0][1]) > HEAD_DOWN_WINDOW_SEC:
-                head_down_events.popleft()
-            _hd_count   = len(head_down_events)
-            _hd_total   = sum(e[1] - e[0] for e in head_down_events)
-            _hd_current = (_now_hd - head_down_start) if head_down_start is not None else 0.0
-            phone_by_gaze_pattern = (
-                _hd_current >= HEAD_DOWN_DURATION_LIMIT or
-                _hd_count   >= HEAD_DOWN_FREQ_LIMIT     or
-                _hd_total   >= HEAD_DOWN_TOTAL_LIMIT
-            )
-
             phone_by_wrist = False
             if yolo and face and yolo["wrist_xy"] and face["mouth_xy"]:
                 face_y = face["mouth_xy"][1]
@@ -233,7 +205,7 @@ def thread_decision():
                     if wy < face_y + fw * 2.0:
                         phone_by_wrist = True
                         break
-            phone_cond = phone_by_bbox or phone_by_gaze or phone_by_wrist or phone_by_gaze_pattern
+            phone_cond = phone_by_bbox or phone_by_gaze or phone_by_wrist
 
             # ── PERCLOS 疲勞偵測（滾動窗口）──
             _now_pc = time.perf_counter()
@@ -302,8 +274,6 @@ def thread_decision():
                     msg = "[警示] Level 2: 偵測到使用手機，請放下手機專注駕駛"
                 elif phone_by_wrist:
                     msg = "[警示] Level 2: 疑似使用手機，請放下手機專注駕駛"
-                elif phone_by_gaze_pattern:
-                    msg = "[警示] Level 2: 反覆低頭分心，請注意前方路況"
                 else:
                     msg = "[警示] Level 2: 疑似低頭分心，請注意前方路況"
             elif trig_distract:
@@ -324,9 +294,6 @@ def thread_decision():
                     "fatigue":  trig_fatigue,
                     "distract": trig_distract,
                 }
-                display_state["head_down_count"]   = _hd_count
-                display_state["head_down_total"]   = round(_hd_total, 1)
-                display_state["head_down_current"] = round(_hd_current, 1)
 
             if RECORD_CSV:
                 csv_writer.writerow([
@@ -337,8 +304,7 @@ def thread_decision():
                     f"{face['roll']:.2f}" if face and face["roll"]    is not None else "",
                     f"{face['ear_val']:.4f}" if face and face["ear_val"] is not None else "",
                     f"{cam_off:.1f}",
-                    int(phone_by_bbox), int(phone_by_gaze), int(phone_by_wrist), int(phone_by_gaze_pattern),
-                    _hd_count, f"{_hd_total:.1f}", f"{_hd_current:.1f}",
+                    int(phone_by_bbox), int(phone_by_gaze), int(phone_by_wrist),
                     int(smoke_cond), int(fatigue_cond), int(distract_cond),
                     level, msg,
                 ])
