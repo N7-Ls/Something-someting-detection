@@ -47,7 +47,7 @@ app = Flask(__name__)
 FEATURE_PATH      = os.path.join(BASE_DIR, "ResNet", "user_feature.npy")
 SIMILARITY_THRESH = 0.4
 
-HELMET_API_URL = "https://uncommutatively-unpersuadable-an.ngrok-free.dev/api/chat"
+HELMET_API_URL = "http://140.120.183.22:8899/api/chat"
 HELMET_API_KEY = "upiceollama"
 HELMET_PROMPT  = (
     "Step 1: Is the person wearing a helmet? If no, output 'Result: No helmet'.\n\n"
@@ -94,6 +94,7 @@ def _camera_worker():
     while not _cam_stop.is_set():
         ret, frame = cap.read()
         if ret:
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
             with _frame_lock:
                 _current_frame = frame.copy()
         time.sleep(0.05)

@@ -28,7 +28,10 @@ WRIST_MOUTH_RATIO = 0.55
 PHONE_ROI_PAD     = 0.22   # 手腕 ROI 半徑（佔畫面最短邊比例）；手機通常在手腕周圍這個範圍
 YAW_PITCH_LIMIT   = 45.0
 PITCH_PHONE_LIMIT = 20.0
-EAR_THRESHOLD     = 0.27   # 提高靈敏度（MediaPipe FaceLandmarker 垂眼時 EAR 約 0.20~0.28）
+EAR_THRESHOLD     = 0.27   # 校準失敗時的 fallback 預設值
+EAR_THRESHOLD_RATIO = 0.80 # 動態閾值 = 校準期間量到的睜眼基準 EAR 中位數 × 此比例
+EAR_THRESHOLD_MIN   = 0.12 # 動態閾值下限，避免基準值異常過低
+EAR_THRESHOLD_MAX   = 0.30 # 動態閾值上限，避免基準值異常過高
 FUSE_TIME_WINDOW  = 0.1
 
 # ── PERCLOS 疲勞偵測參數 ──

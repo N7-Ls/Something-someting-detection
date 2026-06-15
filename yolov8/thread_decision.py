@@ -13,7 +13,8 @@ import numpy as np
 import state
 from config import (
     OUTPUT_DIR, RECORD_CSV, CALIB_SECONDS,
-    YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT, EAR_THRESHOLD,
+    YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT,
+    EAR_THRESHOLD_RATIO, EAR_THRESHOLD_MIN, EAR_THRESHOLD_MAX,
     FUSE_TIME_WINDOW, WRIST_MOUTH_RATIO, CIG_MOUTH_RATIO,
     DURATION_DISTRACT, DURATION_SMOKE, DURATION_SMOKE_NOCIG,
     DURATION_PHONE, DURATION_FATIGUE,
@@ -24,6 +25,7 @@ from state import (
     queue_decision, stop_event, recalib_event,
     display_state, display_lock,
     get_cam_offset, set_cam_offset,
+    get_ear_threshold, set_ear_threshold,
 )
 from utils import wrap_angle, pixel_dist
 
@@ -62,6 +64,7 @@ def thread_decision():
 
     # ── 自動校準 ──
     calib_pitches = []
+    calib_ears    = []
     calib_start   = time.perf_counter()
     calibrated    = False
 
@@ -73,12 +76,25 @@ def thread_decision():
             new_off  = float(np.degrees(np.arctan2(np.mean(np.sin(rads)),
                                                     np.mean(np.cos(rads)))))
             set_cam_offset(new_off)
-            status = f"校準完成：offset={new_off:+.1f}° (C 鍵重新校準)"
+            status = f"校準完成：offset={new_off:+.1f}°"
             logging.info(f"校準完成：{new_off:.1f}°（樣本數 {len(calib_pitches)}）")
         else:
             new_off = get_cam_offset()
-            status  = f"校準樣本不足，沿用預設 {new_off:+.1f}° (C 鍵重新校準)"
+            status  = f"校準樣本不足，沿用預設 {new_off:+.1f}°"
             logging.warning("校準樣本不足，使用預設 PITCH_CAM_OFFSET")
+
+        if len(calib_ears) >= 10:
+            baseline_ear = float(np.median(calib_ears))
+            new_ear_thr  = baseline_ear * EAR_THRESHOLD_RATIO
+            new_ear_thr  = min(max(new_ear_thr, EAR_THRESHOLD_MIN), EAR_THRESHOLD_MAX)
+            set_ear_threshold(new_ear_thr)
+            status += f"，EAR閾值={new_ear_thr:.3f}（基準{baseline_ear:.3f}）"
+            logging.info(f"EAR 閾值校準完成：{new_ear_thr:.3f}（基準 {baseline_ear:.3f}，樣本數 {len(calib_ears)}）")
+        else:
+            status += f"，EAR閾值沿用預設 {get_ear_threshold():.3f}"
+            logging.warning("EAR 校準樣本不足，沿用預設 EAR_THRESHOLD")
+
+        status += "（C 鍵重新校準）"
         with display_lock:
             display_state["calib_status"] = status
 
@@ -104,6 +120,7 @@ def thread_decision():
             if recalib_event.is_set():
                 recalib_event.clear()
                 calib_pitches.clear()
+                calib_ears.clear()
                 calib_start = time.perf_counter()
                 calibrated  = False
                 with display_lock:
@@ -139,12 +156,14 @@ def thread_decision():
             face = (cache_face.get(fid) or
                     (cache_face[max(cache_face.keys())] if cache_face else None))
 
-            # ── 校準期間收集 raw pitch ──
+            # ── 校準期間收集 raw pitch / EAR ──
             raw_pitch = face["pitch"] if (face and face["pitch"] is not None) else None
             if not calibrated:
                 remaining = CALIB_SECONDS - (time.perf_counter() - calib_start)
                 if raw_pitch is not None:
                     calib_pitches.append(raw_pitch)
+                if face is not None and face["ear_val"] is not None:
+                    calib_ears.append(face["ear_val"])
                 if remaining <= 0:
                     _finish_calibration()
                     calibrated = True
@@ -186,7 +205,8 @@ def thread_decision():
             while ear_history and (_now_pc - ear_history[0][0]) > PERCLOS_WINDOW_SEC:
                 ear_history.popleft()
             if len(ear_history) >= 10:
-                _closed = sum(1 for _, e in ear_history if e < EAR_THRESHOLD)
+                _ear_thr = get_ear_threshold()
+                _closed  = sum(1 for _, e in ear_history if e < _ear_thr)
                 _perclos = _closed / len(ear_history)
             else:
                 _perclos = 0.0

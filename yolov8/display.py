@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from config import (
-    EAR_THRESHOLD, YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT, WRIST_MOUTH_RATIO,
+    YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT, WRIST_MOUTH_RATIO,
 )
+from state import get_ear_threshold
 
 _font_cache: dict = {}
 
@@ -111,7 +112,7 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
 
     def ear_color(v):
         if v is None: return (180, 180, 180)
-        return (0, 0, 255) if v < EAR_THRESHOLD else (0, 255, 80)
+        return (0, 0, 255) if v < get_ear_threshold() else (0, 255, 80)
 
     def yaw_color(v):
         if v is None: return (180, 180, 180)

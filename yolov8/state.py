@@ -4,7 +4,7 @@
 """
 import queue
 import threading
-from config import PITCH_CAM_OFFSET, QUEUE_MAXSIZE, CALIB_SECONDS
+from config import PITCH_CAM_OFFSET, EAR_THRESHOLD, QUEUE_MAXSIZE, CALIB_SECONDS
 
 # ── Queue ──
 queue_pose     = queue.Queue(maxsize=QUEUE_MAXSIZE)
@@ -28,6 +28,19 @@ def set_cam_offset(v: float):
     global _cam_offset
     with _cam_offset_lock:
         _cam_offset = v
+
+# ── EAR 閉眼閾值（執行期依個人/場次校準動態更新）──
+_ear_threshold      = EAR_THRESHOLD
+_ear_threshold_lock = threading.Lock()
+
+def get_ear_threshold() -> float:
+    with _ear_threshold_lock:
+        return _ear_threshold
+
+def set_ear_threshold(v: float):
+    global _ear_threshold
+    with _ear_threshold_lock:
+        _ear_threshold = v
 
 # ── 香菸模型可用旗標（由 thread_yolo 載入後設為 True）──
 cig_model_available = False
