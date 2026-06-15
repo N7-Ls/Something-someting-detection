@@ -2,6 +2,11 @@
 
 邊緣運算（Jetson Nano）單次臉部驗證，驗證後**立即釋放模型記憶體**再交棒給監控模組。
 
+> **主流程是 `web/app.py`**，它的 `_verify_frame()` / `/api/register`
+> 自行重寫了一份與本模組相同的邏輯（同樣的 uniface API、同樣的 0.4 門檻），
+> 並未 import 這裡的檔案。`register_user.py`/`verify_user.py` 是獨立 CLI 工具，
+> 雙方共用同一份 `user_feature.npy`。改門檻或演算法時兩處都要看。
+
 ## 限制
 
 - 目標部署：Jetson Nano JetPack 4.6（Python 3.6），禁用 3.7+ 語法（walrus `:=`、dataclasses 等）

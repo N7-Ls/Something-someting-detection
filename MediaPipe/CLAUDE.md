@@ -1,4 +1,8 @@
-# 安全帽偵測模組
+# 安全帽偵測模組（實驗性，未整合）
+
+> ❌ **目前不在主流程裡**。`web/app.py` 的安全帽確認走的是
+> `Helmet/` + LLM API（Gemma3:27B）方案，不是這裡的 MediaPipe+MobileNetV2 方案。
+> 這裡是另一條技術路線的原型/訓練腳本，若要重新啟用需自行接回 `web/app.py`。
 
 臉部幾何定位（MediaPipe 468 點）+ 材質分類（MobileNetV2）判斷頭頂是否戴安全帽。
 

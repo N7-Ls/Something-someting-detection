@@ -1,5 +1,10 @@
 yolov8/output/
 _trash/
 
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
 # Windows reserved device name (cannot be handled by git on Windows)
 nul

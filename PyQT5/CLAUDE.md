@@ -1,6 +1,9 @@
 # PyQt5 儀表板
 
-取代 `yolov8/main.py` 的 cv2.imshow，提供圖形化監控介面。
+> ❌ **與 `web/app.py` 主流程無關**，是獨立執行 yolov8 管線時的本機 GUI（取代
+> `yolov8/main.py` 的 cv2.imshow）。修改行駛監控邏輯只需動 `yolov8/`，
+> 這裡只是另一種顯示方式。
+
 直接匯入 yolov8 四執行緒，讀取 `state.py` 共享狀態渲染 UI。
 
 ## 架構
