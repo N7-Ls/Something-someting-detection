@@ -3,14 +3,15 @@
 部署環境：NVIDIA Jetson Nano / Windows 開發。
 技術棧：Python + OpenCV + YOLOv8 + MediaPipe + Threading。
 
-被 `web/app.py` 直接 import（`state`/`display.annotate`/四條 thread 函式）；
+被 `web/app.py` 直接 import（`state`/`display.annotate`/五條 thread 函式）；
 `main.py` 是獨立 cv2 測試入口，`PyQT5/dashboard.py` 是另一種獨立 GUI 入口。
 
 ## 執行緒架構
 
 ```
-攝影機 → queue_pose → thread_yolo (手機/手腕/香菸)
+攝影機 → queue_pose → thread_yolo (手機/手腕)
        → queue_face → thread_mediapipe (EAR/頭姿/嘴部)
+       → queue_cig  → thread_cigarette (香菸，獨立執行緒避免阻塞手機/pose)
                          ↓
                    queue_decision → thread_decision (融合/計時/PERCLOS/CSV)
                                         ↓
@@ -27,11 +28,12 @@
 | `state.py` | 跨執行緒共享狀態（Queue/Lock/Event） |
 | `utils.py` | 純工具函式（EAR、solvePnP、wrap_angle） |
 | `thread_capture.py` | 影像擷取，Queue 滿時丟幀 |
-| `thread_yolo.py` | 手機偵測（ROI 模式）+ 手腕/手肘關鍵點 + 香菸偵測 |
+| `thread_yolo.py` | 手機偵測（ROI 模式）+ 手腕/手肘關鍵點 |
+| `thread_cigarette.py` | 香菸偵測，獨立執行緒，time-based 間隔推論 + 臉部 ROI 裁切 |
 | `thread_mediapipe.py` | EAR + solvePnP 頭姿 + 嘴部中心 + 臉寬 |
 | `thread_decision.py` | 自動校準 + 時序融合(±0.1s) + PERCLOS 疲勞 + Grace Period + CSV |
 | `display.py` | 畫面標註（Level 顏色、資訊面板、`annotate(minimal=True)` 給 PyQt5 用）|
-| `main.py` | 入口(cv2)：啟動 4 執行緒 + cv2.imshow |
+| `main.py` | 入口(cv2)：啟動 5 執行緒 + cv2.imshow |
 
 ## 手機偵測架構（ROI 模式）
 
@@ -62,7 +64,9 @@ thread_yolo 每幀：
   (`PERCLOS_WINDOW_SEC`) 內 `ear < EAR_THRESHOLD`(0.27) 的幀數比例
   ≥ `PERCLOS_THRESHOLD`(0.50) 即觸發；`DURATION_FATIGUE=0`（PERCLOS 已含時序過濾）
 - Grace Period：條件消失後再等 `HOLD_MAP[key]` 秒才重置，防單幀 YOLO 缺失誤重置
-- 香菸模型：time-based 間隔推論（`CIG_INTERVAL_SEC`），以臉部為中心裁 ROI 送入；
+- 香菸模型：獨立執行緒 `thread_cigarette`，time-based 間隔推論（`CIG_INTERVAL_SEC`，
+  `YOLO_CIG_IMGSZ`=320），以臉部為中心裁 ROI 送入，結果寫入 `display_state["cig_boxes"]`；
+  `thread_decision` 直接讀取 `cig_boxes` 判斷 `cig_near_mouth`，
   模型不可用時 fallback 為「手腕靠嘴」判定（`DURATION_SMOKE_NOCIG`=3.0s）
 - 時間戳全用 `time.perf_counter()`，防 NTP 校時影響
 

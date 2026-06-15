@@ -9,6 +9,7 @@ from config import PITCH_CAM_OFFSET, EAR_THRESHOLD, QUEUE_MAXSIZE, CALIB_SECONDS
 # ── Queue ──
 queue_pose     = queue.Queue(maxsize=QUEUE_MAXSIZE)
 queue_face     = queue.Queue(maxsize=QUEUE_MAXSIZE)
+queue_cig      = queue.Queue(maxsize=QUEUE_MAXSIZE)
 queue_decision = queue.Queue(maxsize=QUEUE_MAXSIZE * 2)
 queue_display  = queue.Queue(maxsize=2)
 

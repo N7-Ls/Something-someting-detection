@@ -17,6 +17,7 @@ from state  import (
 from display          import annotate
 from thread_capture   import thread_capture
 from thread_yolo      import thread_yolo
+from thread_cigarette import thread_cigarette
 from thread_mediapipe import thread_mediapipe
 from thread_decision  import thread_decision
 from utils            import put_nowait_safe
@@ -28,6 +29,7 @@ def main():
     threads = [
         threading.Thread(target=thread_capture,   name="Capture",    daemon=True),
         threading.Thread(target=thread_yolo,       name="YOLOv8",     daemon=True),
+        threading.Thread(target=thread_cigarette,  name="Cigarette",  daemon=True),
         threading.Thread(target=thread_mediapipe,  name="MediaPipe",  daemon=True),
         threading.Thread(target=thread_decision,   name="Decision",   daemon=True),
     ]

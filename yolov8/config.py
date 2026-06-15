@@ -17,11 +17,11 @@ CALIB_SECONDS    = 5.0
 PITCH_CAM_OFFSET = 25.0   # 初始估計值，校準後動態更新
 
 # ── 感測閾值 ──
-YOLO_IMGSZ        = 640
 YOLO_POSE_IMGSZ   = 416    # pose 模型推論解析度（原 640，降低以減少延遲）
-YOLO_PHONE_IMGSZ  = 320    # 全圖掃描時用較低解析度減少延遲
+YOLO_PHONE_IMGSZ  = 320    # 手機偵測解析度（ROI 與全圖掃描皆用此值減少延遲）
 YOLO_PHONE_CONF   = 0.30   # 手機偵測門檻（ROI 模式下空間已限制，可適度放低）
 YOLO_CIG_CONF     = 0.38   # 香菸偵測門檻
+YOLO_CIG_IMGSZ    = 320    # 香菸模型推論解析度（降低以減少延遲）
 CIG_MOUTH_RATIO   = 1.2    # cig BBox 中心距嘴部距離 ≤ 臉寬 × 此倍數才計入
 CIG_INTERVAL_SEC  = 0.3    # 香菸模型最短推論間隔（秒）
 WRIST_MOUTH_RATIO = 0.55

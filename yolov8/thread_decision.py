@@ -242,7 +242,7 @@ def thread_decision():
                                 if pixel_dist((cx, cy), face["mouth_xy"]) < cig_spatial_thr:
                                     cig_near_mouth = True
                                     break
-                            smoke_cond = yolo["cigarette_detected"] and wrist_close and cig_near_mouth
+                            smoke_cond = wrist_close and cig_near_mouth
                         else:
                             smoke_cond = wrist_close
 

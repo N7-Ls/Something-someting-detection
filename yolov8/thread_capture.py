@@ -1,12 +1,12 @@
 """
 執行緒 1：影像擷取。
-將每個影格同時送進 queue_pose / queue_face / queue_display。
+將每個影格同時送進 queue_pose / queue_face / queue_cig / queue_display。
 """
 import cv2
 import logging
 import time
 from config import CAMERA_INDEX
-from state  import queue_pose, queue_face, queue_display, stop_event
+from state  import queue_pose, queue_face, queue_cig, queue_display, stop_event
 from utils  import put_nowait_safe
 
 
@@ -30,6 +30,7 @@ def thread_capture():
             packet = (frame_id, ts, frame)
             put_nowait_safe(queue_pose,    packet)
             put_nowait_safe(queue_face,    packet)
+            put_nowait_safe(queue_cig,     packet)
             put_nowait_safe(queue_display, (frame_id, frame))
             frame_id += 1
     except Exception as e:
@@ -40,5 +41,6 @@ def thread_capture():
         for _ in range(2):
             put_nowait_safe(queue_pose, None)
             put_nowait_safe(queue_face, None)
+            put_nowait_safe(queue_cig,  None)
         put_nowait_safe(queue_display, None)
         logging.info("影像擷取執行緒結束")

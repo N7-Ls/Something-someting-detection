@@ -36,6 +36,7 @@ import state as yolo_state
 from display import annotate as yolo_annotate
 from thread_capture import thread_capture
 from thread_yolo import thread_yolo
+from thread_cigarette import thread_cigarette
 from thread_mediapipe import thread_mediapipe
 from thread_decision import thread_decision
 from utils import put_nowait_safe
@@ -346,7 +347,7 @@ def api_start_driving():
 
     # 重置 yolov8 共享狀態
     yolo_state.stop_event.clear()
-    for q in (yolo_state.queue_pose, yolo_state.queue_face,
+    for q in (yolo_state.queue_pose, yolo_state.queue_face, yolo_state.queue_cig,
               yolo_state.queue_decision, yolo_state.queue_display):
         while not q.empty():
             try:
@@ -357,6 +358,7 @@ def api_start_driving():
     for target, name in [
         (thread_capture,   "Capture"),
         (thread_yolo,      "YOLOv8"),
+        (thread_cigarette, "Cigarette"),
         (thread_mediapipe, "MediaPipe"),
         (thread_decision,  "Decision"),
     ]:
