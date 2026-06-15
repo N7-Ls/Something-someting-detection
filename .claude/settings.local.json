@@ -56,7 +56,8 @@
       "Bash(wget -q --show-progress -O yolov8n-pose.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n-pose.pt\")",
       "Bash(wget -q --show-progress -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")",
       "Bash(conda install *)",
-      "Bash(wget -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")"
+      "Bash(wget -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")",
+      "Bash(python3 -c \"import config, state, display, thread_decision; print\\('ok'\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\Documents\\AI_Product\\Something-someting-detection\\web"

@@ -19,6 +19,9 @@ def _get_chinese_font(size: int):
         r"C:\Windows\Fonts\msjh.ttc",
         r"C:\Windows\Fonts\msyh.ttc",
         r"C:\Windows\Fonts\simsun.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/arphic/uming.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
     ]
     font = ImageFont.load_default()
     for path in candidates:
