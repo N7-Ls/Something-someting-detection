@@ -52,16 +52,20 @@ def crop_head(image_path: str) -> str:
     best_box = None
     best_kps = None
     best_conf = 0.0
+    best_area = 0.0
 
+    # 取畫面中 bbox 面積最大的人（最靠近鏡頭=駕駛本人），避免旁人入鏡時誤判
     for r in results:
         if r.keypoints is None:
             continue
         for i, kps in enumerate(r.keypoints.xy):
-            conf = float(r.boxes.conf[i]) if r.boxes is not None else 0.0
-            if conf > best_conf:
-                best_conf = conf
-                best_box = r.boxes.xyxy[i].tolist()
-                best_kps = kps
+            box  = r.boxes.xyxy[i].tolist()
+            area = (box[2] - box[0]) * (box[3] - box[1])
+            if area > best_area:
+                best_area = area
+                best_box  = box
+                best_kps  = kps
+                best_conf = float(r.boxes.conf[i]) if r.boxes is not None else 0.0
 
     if best_box is None:
         print(f"[WARN] 未偵測到人物，使用原圖：{image_path}")
