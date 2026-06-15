@@ -59,7 +59,8 @@
       "Bash(wget -O yolov8s.pt \"https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt\")",
       "Bash(python3 -c \"import config, state, display, thread_decision; print\\('ok'\\)\")",
       "Bash(python3 -c \"import config, thread_yolo\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('yolov8/display.py'\\).read\\(\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\Documents\\AI_Product\\Something-someting-detection\\web"

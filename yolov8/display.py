@@ -5,11 +5,6 @@ import os
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from config import (
-    YAW_PITCH_LIMIT, PITCH_PHONE_LIMIT, WRIST_MOUTH_RATIO,
-)
-from state import get_ear_threshold
-
 _font_cache: dict = {}
 
 def _get_chinese_font(size: int):
@@ -105,74 +100,6 @@ def annotate(frame, state: dict, fps: float, display_frame_id: int = 0,
 
     if minimal:
         return out
-
-    # ── 左側資訊面板（cv2 獨立模式，PyQt5 模式已由 StatusPanel 顯示）──
-    ear_v     = state["ear_val"]
-    yaw_v     = state["yaw"]
-    roll_v    = state["roll"]
-    pitchc_v  = state.get("pitch_corr")
-    perclos_v = state.get("perclos", 0.0)
-
-    def ear_color(v):
-        if v is None: return (180, 180, 180)
-        return (0, 0, 255) if v < get_ear_threshold() else (0, 255, 80)
-
-    def yaw_color(v):
-        if v is None: return (180, 180, 180)
-        return (0, 200, 255) if abs(v) > YAW_PITCH_LIMIT else (0, 255, 80)
-
-    def pitchc_color(v):
-        if v is None: return (180, 180, 180)
-        return (0, 200, 255) if (v > PITCH_PHONE_LIMIT or v < -YAW_PITCH_LIMIT) else (0, 255, 80)
-
-    face_ok  = state.get("face_detected", False)
-    mp_cnt   = state.get("mp_frames", 0)
-    face_txt = f"Face : OK  (#{mp_cnt})" if face_ok else f"Face : ND  (#{mp_cnt})"
-    face_clr = (0, 255, 80) if face_ok else (0, 80, 255)
-
-    fw   = state.get("face_width")
-    wmd  = state.get("wrist_mouth_dist")
-    thr  = (fw * WRIST_MOUTH_RATIO) if fw else None
-
-    def wmd_color(d, t):
-        if d is None or t is None: return (180, 180, 180)
-        return (0, 0, 255) if d < t else (0, 255, 80)
-
-    wmd_txt    = (f"W-M  : {wmd:.0f}/{thr:.0f}px"
-                  if wmd is not None and thr is not None else "W-M  : --")
-    pitchc_txt = (f"Ptch*: {pitchc_v:+.1f}" if pitchc_v is not None else "Ptch*: --")
-
-    panel = [
-        (face_txt,                                                              face_clr),
-        (f"EAR  : {ear_v:.3f}  P:{perclos_v:.0%}" if ear_v is not None else "EAR  : --", ear_color(ear_v)),
-        (f"Yaw  : {yaw_v:+.1f}" if yaw_v   is not None else "Yaw  : --",     yaw_color(yaw_v)),
-        (pitchc_txt,                                                            pitchc_color(pitchc_v)),
-        (f"Roll : {roll_v:+.1f}"if roll_v  is not None else "Roll : --",     (180, 180, 180)),
-        (wmd_txt,                                                               wmd_color(wmd, thr)),
-        (f"FPS  : {fps:.1f}",                                                  (200, 200, 200)),
-    ]
-
-    yolo_fid = state.get("yolo_frame_id", 0)
-    face_fid = state.get("face_frame_id", 0)
-    yolo_lag = display_frame_id - yolo_fid
-    face_lag = display_frame_id - face_fid
-    lag_txt   = f"Sync : Y-{yolo_lag} F-{face_lag}"
-    lag_color = (0, 200, 255) if (yolo_lag > 8 or face_lag > 8) else (100, 100, 100)
-    panel.append((lag_txt, lag_color))
-
-    LINE_H  = 28
-    PANEL_W = 235
-    PANEL_H = len(panel) * LINE_H + 10
-    MARGIN  = 8
-
-    overlay = out.copy()
-    cv2.rectangle(overlay, (MARGIN, MARGIN), (MARGIN + PANEL_W, MARGIN + PANEL_H), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.55, out, 0.45, 0, out)
-
-    for i, (txt, txt_color) in enumerate(panel):
-        y_pos = MARGIN + LINE_H * (i + 1)
-        cv2.putText(out, txt, (MARGIN + 6, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.58, (0, 0, 0), 3)
-        cv2.putText(out, txt, (MARGIN + 6, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.58, txt_color, 1)
 
     # ── 頂部校準狀態橫幅 ──
     calib_txt = state.get("calib_status", "")
